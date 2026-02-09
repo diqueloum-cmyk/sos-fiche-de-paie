@@ -54,28 +54,6 @@
       ]
     }
   ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/services",
-      "dest": "/services.html"
-    },
-    {
-      "src": "/tarifs",
-      "dest": "/tarifs.html"
-    },
-    {
-      "src": "/faq",
-      "dest": "/faq.html"
-    },
-    {
-      "src": "/contact",
-      "dest": "/contact.html"
-    }
-  ],
   "functions": {
     "api/analyze.js": {
       "maxDuration": 60
