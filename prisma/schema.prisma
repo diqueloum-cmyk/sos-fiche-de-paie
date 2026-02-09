@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Table des utilisateurs
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  passwordHash  String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  analyses      Analysis[]
+  subscription  Subscription?
+
+  @@map("users")
+}
+
+// Table des abonnements Stripe
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  stripeCustomerId  String   @unique
+  stripePriceId     String
+  stripeStatus      String   // active, canceled, past_due, etc.
+  currentPeriodEnd  DateTime
+  cancelAtPeriodEnd Boolean  @default(false)
+  trialEndsAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// Table des analyses de fiches de paie
+model Analysis {
+  id          String   @id @default(cuid())
+  userId      String?
+  fileId      String   @unique
+  status      String   // pending, processing, completed, failed
+  resultData  Json?    // Résultats de l'analyse Claude
+  errorMsg    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime // Date d'expiration (RGPD - 30 jours)
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  file File  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("analyses")
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// Table des fichiers uploadés
+model File {
+  id           String    @id @default(cuid())
+  originalName String
+  mimeType     String
+  size         Int
+  blobUrl      String    // URL du fichier sur Vercel Blob ou S3
+  uploadedAt   DateTime  @default(now())
+  expiresAt    DateTime  // Date d'expiration (RGPD - 30 jours)
+
+  // Relations
+  analysis Analysis?
+
+  @@map("files")
+  @@index([expiresAt])
+}
+
+// Table des tentatives d'API (rate limiting)
+model ApiAttempt {
+  id         String   @id @default(cuid())
+  identifier String   // IP ou userId
+  endpoint   String
+  attemptAt  DateTime @default(now())
+
+  @@map("api_attempts")
+  @@index([identifier, attemptAt])
+}

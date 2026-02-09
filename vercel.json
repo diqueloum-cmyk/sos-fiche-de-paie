@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "framework": null,
+  "installCommand": "npm install",
+  "devCommand": null,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    },
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/services",
+      "dest": "/services.html"
+    },
+    {
+      "src": "/tarifs",
+      "dest": "/tarifs.html"
+    },
+    {
+      "src": "/faq",
+      "dest": "/faq.html"
+    },
+    {
+      "src": "/contact",
+      "dest": "/contact.html"
+    }
+  ],
+  "functions": {
+    "api/analyze.js": {
+      "maxDuration": 60
+    },
+    "api/report/[id].js": {
+      "maxDuration": 30
+    },
+    "api/cron/cleanup.js": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 2 * * *"
+    }
+  ],
+  "regions": ["cdg1"],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

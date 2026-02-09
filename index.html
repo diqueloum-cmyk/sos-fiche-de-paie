@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Fiche de Paie - Vérifiez et Récupérez votre Argent</title>
+    <meta name="description" content="Vérifiez votre fiche de paie, identifiez les erreurs et estimez gratuitement ce que vous pouvez récupérer avec notre IA spécialisée.">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            padding-top: 80px; /* Space for fixed navbar */
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+        
+        .navbar {
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.scrolled {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-link {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: white;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .chat-bubble {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-card {
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .upload-zone {
+            border: 2px dashed #3b82f6;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-zone:hover {
+            border-color: #1e40af;
+            background-color: #eff6ff;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .7;
+            }
+        }
+        
+        .brand-name {
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        
+        .sos-text {
+            color: white;
+        }
+        
+        .fiche-text {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+    <!-- Navigation Bar -->
+    <nav class="navbar fixed top-0 left-0 right-0 bg-gradient-to-r from-blue-700 to-blue-600 shadow-lg z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <a href="#accueil" class="text-2xl md:text-3xl brand-name">
+                    <span class="text-white">SOS</span><span class="text-blue-200">-fiche-de-paie</span><span class="text-white">.fr</span>
+                </a>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#accueil" class="nav-link text-white font-semibold hover:text-blue-200 pb-1">Accueil</a>
+                    <a href="#comment-ca-marche" class="nav-link text-white font-semibold hover:text-blue-200 pb-1">Comment ça marche</a>
+                    <a href="#nos-services" class="nav-link text-white font-semibold hover:text-blue-200 pb-1">Nos services</a>
+                    <a href="#tarifs" class="nav-link text-white font-semibold hover:text-blue-200 pb-1">Tarifs</a>
+                    <a href="#faq" class="nav-link text-white font-semibold hover:text-blue-200 pb-1">FAQ</a>
+                    <a href="#contact" class="nav-link text-white font-semibold hover:text-blue-200 pb-1">Contact</a>
+                    <a href="#accueil" class="bg-white hover:bg-blue-50 text-blue-700 font-semibold px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md">
+                        <i class="fas fa-upload mr-2"></i>Analyser ma fiche
+                    </a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobileMenu" class="hidden md:hidden pb-4">
+                <div class="flex flex-col space-y-3">
+                    <a href="#accueil" class="text-white font-semibold hover:text-blue-200 py-2 border-b border-blue-500">Accueil</a>
+                    <a href="#comment-ca-marche" class="text-white font-semibold hover:text-blue-200 py-2 border-b border-blue-500">Comment ça marche</a>
+                    <a href="#nos-services" class="text-white font-semibold hover:text-blue-200 py-2 border-b border-blue-500">Nos services</a>
+                    <a href="#tarifs" class="text-white font-semibold hover:text-blue-200 py-2 border-b border-blue-500">Tarifs</a>
+                    <a href="#faq" class="text-white font-semibold hover:text-blue-200 py-2 border-b border-blue-500">FAQ</a>
+                    <a href="#contact" class="text-white font-semibold hover:text-blue-200 py-2 border-b border-blue-500">Contact</a>
+                    <a href="#accueil" class="bg-white hover:bg-blue-50 text-blue-700 font-semibold px-6 py-3 rounded-lg text-center mt-2">
+                        <i class="fas fa-upload mr-2"></i>Analyser ma fiche
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <section id="accueil" class="gradient-bg min-h-screen flex items-center">
+        <div class="container mx-auto px-4 py-12">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                
+                <!-- Left Column - Upload Section -->
+                <div class="bg-white rounded-2xl shadow-2xl p-8 lg:p-10">
+                    <div class="space-y-6">
+                        <!-- Header -->
+                        <div class="text-center space-y-3">
+                            <h3 class="text-2xl md:text-3xl font-bold text-blue-900 leading-tight">
+                                Chargez votre ou vos bulletins de paie ici pour recevoir <span class="text-blue-600">gratuitement</span> une estimation des sommes à récupérer
+                            </h3>
+                            <div class="flex items-center justify-center space-x-2 text-blue-600">
+                                <i class="fas fa-arrow-right animate-bounce"></i>
+                                <p class="font-semibold text-lg">Notre IA spécialisée va vous répondre</p>
+                            </div>
+                        </div>
+                        
+
+                        
+                        <!-- Chat Bubble -->
+                        <div class="chat-bubble bg-gray-50 rounded-xl p-6 border-l-4 border-blue-600">
+                            <div class="flex items-start space-x-3">
+                                <div class="bg-blue-600 rounded-full p-2 text-white">
+                                    <i class="fas fa-robot text-xl"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-gray-700 leading-relaxed">
+                                        Bonjour, je suis <strong class="text-gray-700">sos-fiche-de-paie.fr</strong>, chargez votre fiche de paie pour que je vous aide à repérer des erreurs potentielles....
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Upload Zone -->
+                        <div class="upload-zone rounded-xl p-8 text-center cursor-pointer" id="uploadZone">
+                            <div class="space-y-4">
+                                <div class="text-blue-600">
+                                    <i class="fas fa-cloud-upload-alt text-6xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-lg font-semibold text-gray-900 mb-2">
+                                        Déposez vos bulletins de paie ici
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        ou cliquez pour sélectionner des fichiers
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        Formats acceptés : PDF, JPG, PNG (max 10 Mo)
+                                    </p>
+                                </div>
+                                <input type="file" id="fileInput" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                                <button type="button" onclick="document.getElementById('fileInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                    <i class="fas fa-upload mr-2"></i>
+                                    Choisir des fichiers
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- File List (hidden initially) -->
+                        <div id="fileList" class="hidden space-y-2"></div>
+                        
+                        <!-- Submit Button (hidden initially) -->
+                        <button id="analyzeBtn" class="hidden w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] shadow-xl">
+                            <i class="fas fa-search mr-2"></i>
+                            Analyser mes bulletins de paie
+                        </button>
+                        
+                        <!-- Trust Indicators -->
+                        <div class="border-t pt-6 mt-6">
+                            <div class="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-lock text-blue-600"></i>
+                                    <span class="font-medium">100% sécurisé</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-shield-alt text-blue-600"></i>
+                                    <span class="font-medium">Données cryptées</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-user-shield text-blue-600"></i>
+                                    <span class="font-medium">Confidentiel</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column - Content -->
+                <div class="flex flex-col justify-center space-y-10 h-full">
+                    <!-- Main Message -->
+                    <div class="space-y-6">
+                        <p class="text-3xl md:text-4xl font-bold text-blue-500 leading-tight">
+                            Avec <span class="text-blue-900">Sos-fiche-de-paie</span> :
+                        </p>
+                        <h2 class="text-3xl md:text-4xl font-bold text-blue-500 leading-tight">
+                            <span class="text-blue-900">Vérifiez</span> votre fiche de paie
+                        </h2>
+                        <h3 class="text-3xl md:text-4xl font-bold text-blue-500 leading-tight">
+                            <span class="text-blue-900">Identifiez</span> les erreurs.
+                        </h3>
+                        <h3 class="text-3xl md:text-4xl font-bold text-blue-500 leading-tight">
+                            <span class="text-blue-900">Estimez</span> gratuitement ce que vous pouvez récupérer.
+                        </h3>
+                    </div>
+                    
+                    <!-- Benefits -->
+                    <div class="flex flex-col gap-5">
+                        <div class="inline-flex items-center space-x-3 bg-green-500 text-white px-6 py-4 rounded-full shadow-lg w-fit">
+                            <i class="fas fa-check-circle text-xl"></i>
+                            <span class="font-semibold text-lg">Analyse gratuite — résultat immédiat</span>
+                        </div>
+                        <div>
+                            <div class="inline-flex items-center space-x-3 bg-blue-600 text-white px-6 py-4 rounded-full pulse-animation shadow-lg w-fit">
+                                <i class="fas fa-gift text-xl"></i>
+                                <span class="font-semibold text-lg">Offre de lancement : <span class="text-green-300 font-bold">Gratuit</span> pendant 30 jours</span>
+                            </div>
+                            <p class="text-sm text-blue-700 italic mt-3 ml-2">
+                                Votre satisfaction nous amènera des clients.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Why Section - Texte explicatif -->
+    <section class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-xl p-8 md:p-12">
+                    <h3 class="text-2xl md:text-3xl font-bold text-blue-900 mb-6">
+                        Votre bulletin de paie est complexe.
+                    </h3>
+                    
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-700 leading-relaxed">
+                            Une erreur peut vous faire perdre <strong class="text-yellow-600">des centaines d'euros par an</strong> et dans certains cas <strong class="text-yellow-600">jusqu'à plusieurs milliers d'euros sur 3 ans</strong> (période légale de rappel de salaire), souvent sans que vous le sachiez.
+                        </p>
+                        
+                        <div class="bg-white rounded-xl p-6 shadow-md border-l-4 border-yellow-500">
+                            <div class="flex items-start space-x-4">
+                                <div class="bg-yellow-50 rounded-lg p-3 flex-shrink-0">
+                                    <i class="fas fa-chart-line text-yellow-600 text-3xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-gray-700 text-lg leading-relaxed">
+                                        <strong class="text-blue-900">Selon une étude IFOP</strong>, environ <strong class="text-yellow-600">1 salarié sur 3 (≈ 33 %)</strong> a constaté une erreur sur sa fiche de paie au cours d'une année donnée.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-6 shadow-md border-l-4 border-blue-600">
+                            <div class="flex items-start space-x-4">
+                                <div class="bg-blue-50 rounded-lg p-3 flex-shrink-0">
+                                    <i class="fas fa-robot text-blue-600 text-3xl"></i>
+                                </div>
+                                <div>
+                                    <p class="text-gray-700 text-lg leading-relaxed">
+                                        <strong class="text-blue-900">👉 Notre agent IA spécialiste du droit du travail</strong> analyse votre fiche de paie et <strong>chiffre immédiatement le montant potentiellement récupérable.</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- How It Works Section -->
+    <section id="comment-ca-marche" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-blue-900 mb-4">Comment ça marche ?</h2>
+                <p class="text-xl text-blue-800">3 étapes simples pour récupérer votre argent</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-12 max-w-7xl mx-auto">
+                <!-- Étape 1 -->
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-br from-blue-400 to-blue-500 w-24 h-24 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                        <span class="text-4xl font-bold text-white">1️⃣</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-blue-900 text-center">Vous importez votre fiche de paie</h3>
+                    <div class="bg-blue-50 rounded-lg p-5 border border-blue-200 shadow-sm">
+                        <p class="text-gray-700 text-center leading-relaxed">
+                            <strong class="text-blue-900">PDF ou photo</strong><br>
+                            <span class="text-sm text-gray-600">— traitement sécurisé</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Étape 2 -->
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-br from-blue-500 to-blue-600 w-24 h-24 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                        <span class="text-4xl font-bold text-white">2️⃣</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-blue-900 text-center">Notre agent IA analyse votre bulletin</h3>
+                    <div class="bg-blue-50 rounded-lg p-5 border border-blue-200 shadow-sm">
+                        <ul class="text-gray-700 space-y-3">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span><strong class="text-blue-900">Contrôles arithmétiques</strong></span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span><strong class="text-blue-900">Règles légales</strong></span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span><strong class="text-blue-900">Pratiques usuelles de paie</strong></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Étape 3 -->
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-br from-blue-600 to-blue-700 w-24 h-24 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                        <span class="text-4xl font-bold text-white">3️⃣</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-blue-900 text-center">Vous obtenez un diagnostic chiffré</h3>
+                    <div class="bg-blue-50 rounded-lg p-5 border border-blue-200 shadow-sm">
+                        <ul class="text-gray-700 space-y-3">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Anomalie détectée ou non</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span><strong class="text-blue-900">Montant estimé en €</strong></span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Projection possible sur plusieurs mois ou années</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Prix du rapport détaillé, calculé selon le gain estimé</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Étape 4 -->
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-br from-blue-700 to-blue-800 w-24 h-24 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                        <span class="text-4xl font-bold text-white">4️⃣</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-blue-900 text-center">Rapport et courrier type</h3>
+                    <div class="bg-blue-50 rounded-lg p-5 border border-blue-200 shadow-sm">
+                        <p class="text-blue-900 font-semibold mb-3">Quand une anomalie est détectée</p>
+                        <p class="text-gray-700 mb-3 text-sm">Vous pouvez accéder à un rapport complet, qui inclut :</p>
+                        <ul class="text-gray-700 space-y-3 mb-4">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Le détail précis de chaque anomalie</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Les calculs ligne par ligne (ce que vous auriez dû percevoir)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Les références applicables</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                <span>Une lettre de réclamation personnalisée, prête à envoyer à votre employeur</span>
+                            </li>
+                        </ul>
+                        <p class="text-gray-700 text-sm">
+                            Ces informations seront transmises par email <span class="line-through text-gray-400">après paiement</span> <strong class="text-green-600">gratuitement</strong>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Our Services Section -->
+    <section id="nos-services" class="py-20 bg-gradient-to-b from-gray-50 to-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-blue-900 mb-4">NOS SERVICES</h2>
+                <p class="text-xl text-blue-800">Expertise et confidentialité au cœur de notre service</p>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-10 max-w-6xl mx-auto">
+                <!-- Service 1 - IA spécialisée -->
+                <div class="bg-white rounded-2xl shadow-xl p-8 border-t-4 border-blue-600 hover:shadow-2xl transition-shadow duration-300">
+                    <div class="flex items-start space-x-4 mb-6">
+                        <div class="bg-blue-100 rounded-xl p-4 flex-shrink-0">
+                            <i class="fas fa-brain text-4xl text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-blue-900 mb-2">IA spécialisée en droit du travail</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <p class="text-gray-700 leading-relaxed">
+                            Notre technologie analyse votre fiche de paie à partir des <strong class="text-blue-900">règles applicables en droit du travail français</strong> et des pratiques courantes de paie.
+                        </p>
+                        
+                        <div class="bg-blue-50 rounded-lg p-5 border-l-4 border-blue-600">
+                            <p class="text-blue-900 font-semibold mb-3">Elle vérifie notamment :</p>
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700">La cohérence des montants et calculs</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700">Le respect des règles légales (heures supplémentaires, cotisations, remboursements obligatoires)</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700">Certains minima conventionnels lorsque la convention collective est identifiable</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="flex items-start space-x-3 bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                            <i class="fas fa-arrow-right text-green-600 text-xl mt-1 flex-shrink-0"></i>
+                            <p class="text-gray-700">
+                                <strong class="text-green-700">Résultat :</strong> une analyse factuelle, chiffrée et compréhensible, <strong>sans jargon inutile</strong>.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Service 2 - Confidentialité -->
+                <div class="bg-white rounded-2xl shadow-xl p-8 border-t-4 border-blue-600 hover:shadow-2xl transition-shadow duration-300">
+                    <div class="flex items-start space-x-4 mb-6">
+                        <div class="bg-blue-100 rounded-xl p-4 flex-shrink-0">
+                            <i class="fas fa-lock text-4xl text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-blue-900 mb-2">Confidentialité totale</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <p class="text-gray-700 leading-relaxed">
+                            Vos fiches de paie contiennent des <strong class="text-blue-900">données sensibles</strong>.
+                        </p>
+                        <p class="text-gray-700 leading-relaxed">
+                            <strong class="text-blue-900">La confidentialité est au cœur du service.</strong>
+                        </p>
+                        
+                        <div class="bg-blue-50 rounded-lg p-5 border-l-4 border-blue-600">
+                            <ul class="space-y-3">
+                                <li class="flex items-start">
+                                    <i class="fas fa-shield-alt text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700">Documents traités <strong class="text-blue-900">uniquement</strong> pour l'analyse demandée</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-ban text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700"><strong class="text-blue-900">Aucune revente</strong> ni partage des données</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-user-lock text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700">Accès <strong class="text-blue-900">strictement limité</strong></span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-trash-alt text-blue-600 mt-1 mr-3 flex-shrink-0"></i>
+                                    <span class="text-gray-700">Suppression des documents selon notre <strong class="text-blue-900">politique de confidentialité</strong></span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="flex items-start space-x-3 bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                            <i class="fas fa-arrow-right text-green-600 text-xl mt-1 flex-shrink-0"></i>
+                            <p class="text-gray-700">
+                                <strong class="text-green-700">Vous pouvez analyser votre fiche de paie en toute confiance.</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Tarifs Section -->
+    <section id="tarifs" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-blue-900 mb-4">Nos Tarifs</h2>
+                <p class="text-xl text-blue-800">Une tarification juste et proportionnelle à votre gain</p>
+            </div>
+            
+            <!-- Offre de lancement sobre -->
+            <div class="max-w-4xl mx-auto mb-16">
+                <div class="bg-blue-50 rounded-xl shadow-md p-8 border-l-4 border-blue-600">
+                    <div class="flex items-center justify-center space-x-4">
+                        <div class="bg-blue-600 rounded-full p-3">
+                            <i class="fas fa-gift text-3xl text-white"></i>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-2xl font-bold text-blue-900 mb-1">Offre de lancement</h3>
+                            <p class="text-xl text-blue-700 font-semibold"><span class="text-green-600 font-bold">Gratuit</span> pendant 30 jours</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Explication du système -->
+            <div class="max-w-4xl mx-auto mb-12">
+                <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl shadow-xl p-8 text-white">
+                    <h3 class="text-2xl font-bold mb-4 text-center">Comment fonctionne notre tarification ?</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-check-circle text-green-400 text-xl mt-1 flex-shrink-0"></i>
+                            <p class="text-lg leading-relaxed">
+                                Notre IA analyse d'abord <strong class="text-green-400">gratuitement</strong> votre fiche de paie et estime le montant potentiellement récupérable
+                            </p>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-check-circle text-green-400 text-xl mt-1 flex-shrink-0"></i>
+                            <p class="text-lg leading-relaxed">
+                                <strong>Le prix du rapport détaillé dépend du montant estimé</strong> : plus vous pouvez récupérer, plus le rapport est approfondi
+                            </p>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-check-circle text-green-400 text-xl mt-1 flex-shrink-0"></i>
+                            <p class="text-lg leading-relaxed">
+                                Le prix est calculé automatiquement et de manière transparente selon le barème ci-dessous
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Grille tarifaire sous forme de tableau -->
+            <div class="max-w-4xl mx-auto">
+                <h3 class="text-2xl font-bold text-blue-900 mb-6 text-center">Le prix dépend du montant estimé</h3>
+                
+                <div class="bg-white rounded-xl shadow-xl overflow-hidden border-2 border-blue-200">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                        <div class="grid grid-cols-2 gap-4 p-6">
+                            <div class="font-bold text-lg">Gain estimé sur 1 an</div>
+                            <div class="font-bold text-lg text-right">Prix du rapport</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lignes tarifaires -->
+                    <div class="divide-y divide-gray-200">
+                        <!-- Ligne 1 -->
+                        <div class="grid grid-cols-2 gap-4 p-6 hover:bg-blue-50 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-blue-100 rounded-lg p-2">
+                                    <i class="fas fa-coins text-blue-600 text-xl"></i>
+                                </div>
+                                <span class="text-lg text-blue-900 font-semibold">Jusqu'à 250 € / an</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-3xl font-bold text-blue-900">19 €</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 2 -->
+                        <div class="grid grid-cols-2 gap-4 p-6 hover:bg-blue-50 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-blue-200 rounded-lg p-2">
+                                    <i class="fas fa-chart-line text-blue-700 text-xl"></i>
+                                </div>
+                                <span class="text-lg text-blue-900 font-semibold">251 à 500 € / an</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-3xl font-bold text-blue-900">39 €</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 3 -->
+                        <div class="grid grid-cols-2 gap-4 p-6 hover:bg-blue-50 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-blue-300 rounded-lg p-2">
+                                    <i class="fas fa-trophy text-blue-800 text-xl"></i>
+                                </div>
+                                <span class="text-lg text-blue-900 font-semibold">501 à 1 000 € / an</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-3xl font-bold text-blue-900">89 €</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ligne 4 -->
+                        <div class="grid grid-cols-2 gap-4 p-6 bg-blue-900 text-white">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-white/20 rounded-lg p-2">
+                                    <i class="fas fa-crown text-yellow-300 text-xl"></i>
+                                </div>
+                                <span class="text-lg font-semibold">Plus de 1 000 € / an</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-3xl font-bold text-yellow-300">149 €</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Note importante -->
+                <div class="mt-8 bg-green-50 rounded-xl p-6 border-l-4 border-green-500">
+                    <div class="flex items-start space-x-3">
+                        <i class="fas fa-arrow-right text-green-600 text-2xl mt-1 flex-shrink-0"></i>
+                        <p class="text-lg text-gray-700 leading-relaxed">
+                            <strong class="text-green-700">Plus le montant estimé est élevé, plus le rapport est détaillé et approfondi.</strong>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- CTA -->
+                <div class="text-center mt-12">
+                    <a href="#accueil" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg px-12 py-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-xl">
+                        <i class="fas fa-upload mr-2"></i>Commencer l'analyse gratuite
+                    </a>
+                    <p class="text-gray-600 mt-4 text-sm">
+                        Aucun paiement requis • Vous connaîtrez le prix avant de commander le rapport
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- FAQ Section -->
+    <section id="faq" class="py-20 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-blue-900 mb-4">Questions Fréquentes (FAQ)</h2>
+                <p class="text-xl text-blue-800">Tout ce que vous devez savoir sur notre service</p>
+            </div>
+            
+            <div class="max-w-4xl mx-auto space-y-6">
+                <!-- FAQ 1 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Pourquoi vérifier sa fiche de paie ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p>La fiche de paie est un document complexe : heures, taux, cotisations, primes, exonérations, plafonds…</p>
+                        <p>De nombreuses erreurs sont involontaires et passent inaperçues.</p>
+                        <p class="font-semibold text-blue-900">👉 Une simple anomalie peut représenter 20 à 50 € par mois, soit plusieurs centaines d'euros par an, parfois davantage selon votre situation.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 2 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Est-ce fréquent d'avoir une erreur sur sa fiche de paie ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p class="font-bold text-blue-900">Oui.</p>
+                        <p>Selon une étude IFOP, environ 1 salarié sur 3 a déjà constaté une erreur sur sa fiche de paie au cours d'une année.</p>
+                        <p class="font-semibold text-gray-800">Les erreurs concernent le plus souvent :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>les heures supplémentaires,</li>
+                            <li>les primes ou indemnités,</li>
+                            <li>les cotisations sociales,</li>
+                            <li>le remboursement des frais de transport,</li>
+                            <li>ou la cohérence globale du bulletin.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ 3 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Que vérifiez-vous exactement sur ma fiche de paie ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p class="font-semibold text-gray-800">Nous analysons notamment :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>le salaire de base et le temps de travail,</li>
+                            <li>les heures supplémentaires et leurs majorations,</li>
+                            <li>les primes et indemnités,</li>
+                            <li>les cotisations sociales (bases et taux),</li>
+                            <li>le net à payer et le net imposable,</li>
+                            <li>le remboursement des frais de transport,</li>
+                            <li>les mentions obligatoires,</li>
+                            <li>la cohérence générale du bulletin.</li>
+                        </ul>
+                        <p class="mt-2">Lorsque la convention collective est identifiable, certains contrôles conventionnels peuvent également être réalisés.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 4 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Que vais-je recevoir gratuitement ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p>Après l'import de votre bulletin, vous obtenez gratuitement :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>la détection d'une anomalie ou non,</li>
+                            <li>une estimation chiffrée du montant potentiellement récupérable,</li>
+                            <li>une projection possible sur jusqu'à 3 ans (maximum légal).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ 5 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Pourquoi parlez-vous d'un potentiel sur 3 ans ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p>La loi permet, dans certains cas, de réclamer des rappels de salaire jusqu'à 36 mois en arrière.</p>
+                        <p class="font-semibold text-gray-800">Exemple :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>une erreur de 25 € par mois</li>
+                            <li>représente 300 € par an,</li>
+                            <li>et jusqu'à 900 € sur 3 ans.</li>
+                        </ul>
+                        <p class="font-semibold text-red-600">⚠️ Il s'agit d'un potentiel, sous réserve que l'erreur soit réellement présente sur toute la période.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 6 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Dois-je envoyer toutes mes fiches de paie ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p class="font-bold text-blue-900">Non.</p>
+                        <p>Il est inutile d'envoyer 36 bulletins.</p>
+                        <p class="font-semibold text-blue-900">👉 En pratique, 2 à 3 bulletins espacés dans le temps suffisent pour :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>vérifier si l'erreur est récurrente,</li>
+                            <li>affiner le montant récupérable,</li>
+                            <li>confirmer ou ajuster l'estimation initiale.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ 7 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Est-ce que vous garantissez que je vais récupérer de l'argent ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p class="font-bold text-blue-900">Non.</p>
+                        <p>Nous ne faisons aucune promesse de récupération automatique.</p>
+                        <p class="font-semibold text-gray-800">Nous fournissons :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>une analyse factuelle et chiffrée,</li>
+                            <li>des éléments clairs pour agir,</li>
+                            <li>une lettre de réclamation structurée.</li>
+                        </ul>
+                        <p class="mt-2">La récupération dépend ensuite de votre situation et du traitement par l'employeur.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 8 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Mon employeur risque-t-il un problème si je fais une demande ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p>La majorité des erreurs de paie sont non intentionnelles.</p>
+                        <p>Dans la plupart des cas, une demande claire et chiffrée permet une régularisation simple.</p>
+                        <p>Le rapport est rédigé dans un ton neutre et professionnel, sans accusation.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 9 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Mes données sont-elles protégées ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p class="font-bold text-blue-900">Oui.</p>
+                        <p>Vos fiches de paie contiennent des données personnelles sensibles.</p>
+                        <p class="font-semibold text-gray-800">Elles sont :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>traitées uniquement pour l'analyse demandée,</li>
+                            <li>protégées par des mesures de sécurité adaptées,</li>
+                            <li>conservées selon notre politique de confidentialité.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ 10 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        Est-ce un conseil juridique ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <p class="font-bold text-blue-900">Non.</p>
+                        <p>SOS-Fiche-de-paie est un outil d'aide à la compréhension et à l'analyse, pas un cabinet d'avocats.</p>
+                        <p>En cas de situation complexe (accords spécifiques, litige), un professionnel du droit peut être nécessaire.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 11 -->
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+                    <h3 class="text-xl font-bold text-blue-900 mb-3 flex items-start">
+                        <span class="text-yellow-500 mr-3">❓</span>
+                        À qui s'adresse le service ?
+                    </h3>
+                    <div class="text-gray-700 space-y-2 ml-8">
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>Salariés du secteur privé</li>
+                            <li>CDI, CDD, temps plein ou partiel</li>
+                            <li>Cadres et non-cadres</li>
+                        </ul>
+                        <p class="font-semibold text-gray-800 mt-3">Le service est particulièrement utile si :</p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>vous faites des heures supplémentaires,</li>
+                            <li>vous percevez des primes,</li>
+                            <li>votre situation a évolué récemment,</li>
+                            <li>vous n'avez jamais vérifié vos fiches de paie.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Contact Section -->
+    <section id="contact" class="py-20 bg-gradient-to-b from-gray-50 to-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-blue-900 mb-4">Contactez-nous</h2>
+                <p class="text-xl text-blue-800">Une question ? Notre équipe est là pour vous répondre</p>
+            </div>
+            
+            <div class="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
+                <!-- Contact Form -->
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-blue-900 mb-6">Envoyez-nous un message</h3>
+                    <form class="space-y-4">
+                        <div>
+                            <label class="block text-blue-900 font-semibold mb-2">Nom complet</label>
+                            <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" placeholder="Votre nom">
+                        </div>
+                        <div>
+                            <label class="block text-blue-900 font-semibold mb-2">Email</label>
+                            <input type="email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" placeholder="votre@email.com">
+                        </div>
+                        <div>
+                            <label class="block text-blue-900 font-semibold mb-2">Sujet</label>
+                            <input type="text" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" placeholder="Objet de votre message">
+                        </div>
+                        <div>
+                            <label class="block text-blue-900 font-semibold mb-2">Message</label>
+                            <textarea rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600" placeholder="Votre message..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-300">
+                            <i class="fas fa-paper-plane mr-2"></i>Envoyer le message
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Contact Info -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-xl p-8">
+                        <h3 class="text-2xl font-bold text-blue-900 mb-6">Informations de contact</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-4">
+                                <div class="bg-blue-100 rounded-lg p-3">
+                                    <i class="fas fa-envelope text-2xl text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-blue-900 font-semibold">Email</p>
+                                    <p class="text-gray-700">contact@sos-fiche-de-paie.fr</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <div class="bg-blue-100 rounded-lg p-3">
+                                    <i class="fas fa-clock text-2xl text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-blue-900 font-semibold">Horaires</p>
+                                    <p class="text-gray-700">Lundi - Vendredi : 9h - 18h</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-600 rounded-2xl shadow-xl p-8 text-white">
+                        <h3 class="text-2xl font-bold mb-4">Questions fréquentes ?</h3>
+                        <p class="mb-4">Consultez notre FAQ pour des réponses rapides aux questions les plus courantes.</p>
+                        <a href="#" class="inline-block bg-white text-blue-600 hover:bg-blue-50 font-semibold px-6 py-3 rounded-lg transition-all duration-300">
+                            Voir la FAQ
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Stats Section -->
+    <section class="py-20 gradient-bg text-white">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 text-center">
+                <div>
+                    <div class="text-5xl font-bold mb-2 text-yellow-500">33%</div>
+                    <p class="text-blue-900 font-semibold">des salariés ont une erreur</p>
+                </div>
+                <div>
+                    <div class="text-5xl font-bold mb-2 text-yellow-500">2min</div>
+                    <p class="text-blue-900 font-semibold">pour une analyse complète</p>
+                </div>
+                <div>
+                    <div class="text-5xl font-bold mb-2 text-yellow-500">3 ans</div>
+                    <p class="text-blue-900 font-semibold">de rappel de salaire possible</p>
+                </div>
+                <div>
+                    <div class="text-5xl font-bold mb-2 text-yellow-500">100%</div>
+                    <p class="text-blue-900 font-semibold">gratuit pendant 30 jours</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <section class="py-20 bg-gray-50">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-4xl font-bold text-blue-900 mb-6">Prêt à vérifier votre fiche de paie ?</h2>
+            <p class="text-xl text-blue-800 mb-8">Ne laissez plus passer des erreurs qui vous coûtent de l'argent</p>
+            <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg px-12 py-4 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-xl">
+                <i class="fas fa-rocket mr-2"></i>
+                Commencer l'analyse gratuite
+            </button>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-300 py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-white font-bold text-xl mb-4">SOS-fiche-de-paie.fr</h3>
+                    <p class="text-sm">Votre allié pour détecter les erreurs sur vos bulletins de paie et récupérer ce qui vous est dû.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Liens utiles</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#comment-ca-marche" class="hover:text-white transition">Comment ça marche</a></li>
+                        <li><a href="#tarifs" class="hover:text-white transition">Tarifs</a></li>
+                        <li><a href="#faq" class="hover:text-white transition">FAQ</a></li>
+                        <li><a href="#contact" class="hover:text-white transition">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-semibold mb-4">Légal</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="mentions-legales.html" class="hover:text-white transition">Mentions légales</a></li>
+                        <li><a href="confidentialite.html" class="hover:text-white transition">Politique de confidentialité</a></li>
+                        <li><a href="cgu.html" class="hover:text-white transition">CGU</a></li>
+                        <li><a href="cookies.html" class="hover:text-white transition">Politique cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
+                <p>&copy; 2026 SOS-fiche-de-paie.fr - Tous droits réservés</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
+</body>
+</html>
