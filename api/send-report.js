@@ -238,7 +238,7 @@ export default async function handler(req, res) {
     ]);
 
     // Génération du HTML pour l'email
-    const emailHtml = generateEmailHtml(prenom, analysis, rapportComplet);
+    const emailHtml = generateEmailHtml(prenom, email, analysis, rapportComplet);
 
     // Envoi de l'email via Resend
     const emailData = await resend.emails.send({
@@ -272,7 +272,7 @@ export default async function handler(req, res) {
 }
 
 // Fonction de génération du HTML de l'email
-function generateEmailHtml(prenom, analysis, rapport) {
+function generateEmailHtml(prenom, email, analysis, rapport) {
   const safe = (val, decimals = 2) => {
     const num = Number(val);
     return isNaN(num) ? '0.00' : num.toFixed(decimals);
@@ -406,6 +406,7 @@ function generateEmailHtml(prenom, analysis, rapport) {
 
     <div class="content">
       <p>Bonjour <strong>${prenom}</strong>,</p>
+      <p style="font-size: 14px; color: #666;">Rapport envoyé à : <strong>${email}</strong></p>
 
       <p>Voici votre rapport complet d'analyse de bulletin de paie.</p>
 
