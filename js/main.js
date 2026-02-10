@@ -201,38 +201,175 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Show result modal (demo)
     function showResultModal() {
+        // Simulation des données d'analyse (à remplacer par les vraies données de l'API)
+        const nombreAnomalies = Math.floor(Math.random() * 5) + 1;
+        const gainAnnuel = Math.floor(Math.random() * 500) + 200;
+        const gainTotal = Math.floor(Math.random() * 1500) + 600;
+
+        // Calcul du prix barré selon la grille tarifaire
+        let prixRapport;
+        if (gainAnnuel <= 250) prixRapport = 19;
+        else if (gainAnnuel <= 500) prixRapport = 39;
+        else if (gainAnnuel <= 1000) prixRapport = 89;
+        else prixRapport = 149;
+
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform animate-scale-in">
-                <div class="text-center space-y-4">
-                    <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-                        <i class="fas fa-check text-4xl text-blue-600"></i>
+            <div class="bg-white rounded-2xl p-8 max-w-lg w-full shadow-2xl transform animate-scale-in">
+                <div class="space-y-5">
+                    <!-- Header -->
+                    <div class="text-center">
+                        <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-check text-4xl text-blue-600"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900">💰 Analyse terminée !</h3>
                     </div>
-                    <h3 class="text-2xl font-bold text-gray-900">Analyse terminée !</h3>
-                    <p class="text-gray-600">
-                        Notre IA a détecté <strong class="text-blue-600">${Math.floor(Math.random() * 5) + 1} anomalie(s)</strong> potentielle(s) sur vos bulletins de paie.
-                    </p>
-                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <p class="text-sm text-gray-700">
-                            Montant potentiellement récupérable :
+
+                    <!-- Résultats TEASER -->
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-5 border border-blue-200">
+                        <p class="text-gray-700 mb-3">
+                            Notre IA a détecté <strong class="text-blue-600">${nombreAnomalies} anomalie(s)</strong> potentielle(s) sur vos bulletins de paie.
                         </p>
-                        <p class="text-3xl font-bold text-blue-600 mt-2">
-                            ${Math.floor(Math.random() * 2000) + 500} €
+                        <div class="grid grid-cols-2 gap-3 text-center">
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs text-gray-600">Par an</p>
+                                <p class="text-2xl font-bold text-blue-600">${gainAnnuel} €</p>
+                            </div>
+                            <div class="bg-white rounded-lg p-3">
+                                <p class="text-xs text-gray-600">Total potentiel</p>
+                                <p class="text-2xl font-bold text-blue-600">${gainTotal} €</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prix barré - Offre gratuite -->
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-5 border-2 border-green-300">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-700 mb-2">🎁 Rapport complet détaillé</p>
+                            <p class="text-3xl font-bold">
+                                <span class="line-through text-gray-400">${prixRapport}€</span>
+                                <span class="text-green-600 ml-2">→ GRATUIT</span>
+                            </p>
+                            <p class="text-xs text-gray-600 mt-2 italic">Offre de lancement - Votre satisfaction nous amènera des clients</p>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire Prénom + Email -->
+                    <div class="border-t pt-4">
+                        <p class="font-semibold text-gray-900 mb-3 text-center">
+                            📧 Recevez votre rapport complet par email :
+                        </p>
+                        <form id="emailForm" class="space-y-3">
+                            <div>
+                                <input
+                                    type="text"
+                                    id="prenomInput"
+                                    placeholder="Votre prénom"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                                />
+                            </div>
+                            <div>
+                                <input
+                                    type="email"
+                                    id="emailInput"
+                                    placeholder="votre@email.com"
+                                    required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold px-6 py-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                            >
+                                <i class="fas fa-envelope mr-2"></i>RECEVOIR MON RAPPORT GRATUIT
+                            </button>
+                        </form>
+
+                        <p class="text-xs text-gray-500 text-center mt-3">
+                            <i class="fas fa-lock mr-1"></i>Vos données sont 100% sécurisées et confidentielles
                         </p>
                     </div>
-                    <p class="text-sm text-gray-600">
-                        Un rapport détaillé va être généré et envoyé à votre adresse email.
-                    </p>
-                    <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 w-full">
-                        Fermer
-                    </button>
                 </div>
             </div>
         `;
-        
+
         document.body.appendChild(modal);
-        
+
+        // Gestion du formulaire
+        const form = document.getElementById('emailForm');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const prenom = document.getElementById('prenomInput').value.trim();
+            const email = document.getElementById('emailInput').value.trim();
+
+            // Validation basique
+            if (!prenom || prenom.length < 2) {
+                alert('Veuillez entrer un prénom valide (minimum 2 caractères)');
+                return;
+            }
+
+            if (!email || !email.includes('@')) {
+                alert('Veuillez entrer une adresse email valide');
+                return;
+            }
+
+            // Simulation de l'envoi (à remplacer par l'appel à /api/send-report)
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Envoi en cours...';
+
+            // Simuler l'envoi du rapport
+            setTimeout(function() {
+                // Afficher la confirmation
+                modal.innerHTML = `
+                    <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform animate-scale-in">
+                        <div class="text-center space-y-4">
+                            <div class="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+                                <i class="fas fa-check text-4xl text-green-600"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-900">✅ Rapport envoyé !</h3>
+                            <p class="text-gray-600">
+                                Votre rapport complet a été envoyé à <strong class="text-blue-600">${email}</strong>
+                            </p>
+                            <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <p class="text-sm text-gray-700">
+                                    <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                                    Vérifiez votre boîte mail dans quelques instants. N'oubliez pas de consulter vos spams si vous ne le trouvez pas.
+                                </p>
+                            </div>
+                            <button onclick="this.closest('.fixed').remove()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 w-full">
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }, 2000);
+
+            // TODO: Remplacer par un vrai appel API
+            /*
+            fetch('/api/send-report', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    analysisId: 'xxx', // ID de l'analyse retourné par /api/analyze
+                    prenom: prenom,
+                    email: email
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Afficher confirmation
+            })
+            .catch(error => {
+                alert('Erreur lors de l\'envoi du rapport. Veuillez réessayer.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-envelope mr-2"></i>RECEVOIR MON RAPPORT GRATUIT';
+            });
+            */
+        });
+
         // Close on click outside
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
