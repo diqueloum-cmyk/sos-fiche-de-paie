@@ -178,40 +178,72 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Analyze button click
-    analyzeBtn.addEventListener('click', function() {
+    analyzeBtn.addEventListener('click', async function() {
         if (selectedFiles.length === 0) {
             alert('Veuillez sélectionner au moins un fichier.');
             return;
         }
-        
+
         // Show loading state
         analyzeBtn.disabled = true;
-        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyse en cours...';
-        
-        // Simulate analysis (replace with actual API call)
-        setTimeout(function() {
-            // Show success message
-            showResultModal();
-            
+        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Upload en cours...';
+
+        try {
+            // ÉTAPE 1: Upload du fichier
+            const formData = new FormData();
+            formData.append('file', selectedFiles[0]); // Premier fichier seulement pour l'instant
+
+            const uploadResponse = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!uploadResponse.ok) {
+                const error = await uploadResponse.json();
+                throw new Error(error.error || 'Erreur lors de l\'upload');
+            }
+
+            const uploadData = await uploadResponse.json();
+            console.log('Fichier uploadé:', uploadData);
+
+            // ÉTAPE 2: Lancer l'analyse
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyse en cours (peut prendre jusqu\'à 60s)...';
+
+            const analyzeResponse = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ fileId: uploadData.fileId })
+            });
+
+            if (!analyzeResponse.ok) {
+                const error = await analyzeResponse.json();
+                throw new Error(error.error || 'Erreur lors de l\'analyse');
+            }
+
+            const analysisData = await analyzeResponse.json();
+            console.log('Analyse terminée:', analysisData);
+
+            // ÉTAPE 3: Afficher les résultats
+            showResultModal(analysisData);
+
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert(`Erreur: ${error.message}`);
+        } finally {
             // Reset button
             analyzeBtn.disabled = false;
             analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Analyser mes bulletins de paie';
-        }, 2000);
+        }
     });
     
-    // Show result modal (demo)
-    function showResultModal() {
-        // Simulation des données d'analyse (à remplacer par les vraies données de l'API)
-        const nombreAnomalies = Math.floor(Math.random() * 5) + 1;
-        const gainAnnuel = Math.floor(Math.random() * 500) + 200;
-        const gainTotal = Math.floor(Math.random() * 1500) + 600;
-
-        // Calcul du prix barré selon la grille tarifaire
-        let prixRapport;
-        if (gainAnnuel <= 250) prixRapport = 19;
-        else if (gainAnnuel <= 500) prixRapport = 39;
-        else if (gainAnnuel <= 1000) prixRapport = 89;
-        else prixRapport = 149;
+    // Show result modal (avec vraies données de l'API)
+    function showResultModal(analysisData) {
+        // Utiliser les vraies données de l'analyse
+        const nombreAnomalies = analysisData.nombre_anomalies || 0;
+        const gainAnnuel = Math.round(analysisData.gain_annuel || 0);
+        const gainTotal = Math.round(analysisData.gain_total_potentiel || 0);
+        const prixRapport = analysisData.prix_rapport || 19;
+        const analysisId = analysisData.analysisId;
 
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
@@ -315,13 +347,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Simulation de l'envoi (à remplacer par l'appel à /api/send-report)
+            // Envoi du rapport via l'API
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Envoi en cours...';
 
-            // Simuler l'envoi du rapport
-            setTimeout(function() {
+            // Appel API pour envoyer le rapport
+            fetch('/api/send-report', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    analysisId: analysisId,
+                    prenom: prenom,
+                    email: email
+                })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(err => { throw new Error(err.error || 'Erreur serveur'); });
+                }
+                return res.json();
+            })
+            .then(data => {
                 // Afficher la confirmation
                 modal.innerHTML = `
                     <div class="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform animate-scale-in">
@@ -345,29 +392,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `;
-            }, 2000);
-
-            // TODO: Remplacer par un vrai appel API
-            /*
-            fetch('/api/send-report', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    analysisId: 'xxx', // ID de l'analyse retourné par /api/analyze
-                    prenom: prenom,
-                    email: email
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                // Afficher confirmation
             })
             .catch(error => {
-                alert('Erreur lors de l\'envoi du rapport. Veuillez réessayer.');
+                console.error('Erreur envoi rapport:', error);
+                alert(`Erreur lors de l'envoi du rapport: ${error.message}`);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-envelope mr-2"></i>RECEVOIR MON RAPPORT GRATUIT';
             });
-            */
         });
 
         // Close on click outside
