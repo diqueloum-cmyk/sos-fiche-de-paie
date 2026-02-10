@@ -200,14 +200,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!uploadResponse.ok) {
                 const error = await uploadResponse.json();
-                throw new Error(error.error || 'Erreur lors de l\'upload');
+                throw new Error(error.error || "Erreur lors de l'upload");
             }
 
             const uploadData = await uploadResponse.json();
             console.log('Fichier uploadé:', uploadData);
 
             // ÉTAPE 2: Lancer l'analyse
-            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyse en cours (peut prendre jusqu\'à 60s)...';
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyse en cours (peut prendre jusqu&apos;à 60s)...';
 
             const analyzeResponse = await fetch('/api/analyze', {
                 method: 'POST',
@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!analyzeResponse.ok) {
                 const error = await analyzeResponse.json();
-                throw new Error(error.error || 'Erreur lors de l\'analyse');
+                throw new Error(error.error || "Erreur lors de l'analyse");
             }
 
             const analysisData = await analyzeResponse.json();
