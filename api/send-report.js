@@ -207,30 +207,41 @@ export default async function handler(req, res) {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 4096,
       system: promptWithData,
-      messages: [{
-        role: 'user',
-        content: 'Génère le rapport complet avec tous les détails selon le format JSON spécifié.'
-      }]
+      messages: [
+        {
+          role: 'user',
+          content: 'Génère le rapport complet avec tous les détails. Réponds UNIQUEMENT avec le JSON, sans texte avant ni après.'
+        },
+        {
+          role: 'assistant',
+          content: '{'
+        }
+      ]
     });
 
-    // Parsing de la réponse
-    const responseText = message.content[0].text;
+    // Parsing de la réponse (prefill avec '{' donc on le rajoute)
+    const responseText = '{' + message.content[0].text;
     console.log('Claude stop_reason:', message.stop_reason, '| response length:', responseText.length);
     let rapportComplet;
 
     try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        rapportComplet = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('Aucun JSON trouvé dans la réponse');
-      }
+      rapportComplet = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('Erreur parsing JSON rapport:', parseError);
-      console.error('Réponse brute (500 premiers chars):', responseText.substring(0, 500));
-      return res.status(500).json({
-        error: 'Erreur lors de la génération du rapport'
-      });
+      // Fallback: essayer d'extraire le JSON avec regex
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          rapportComplet = JSON.parse(jsonMatch[0]);
+        } else {
+          throw parseError;
+        }
+      } catch (fallbackError) {
+        console.error('Erreur parsing JSON rapport:', fallbackError.message);
+        console.error('Réponse brute (500 premiers chars):', responseText.substring(0, 500));
+        return res.status(500).json({
+          error: 'Erreur lors de la génération du rapport'
+        });
+      }
     }
 
     // Sauvegarde du rapport et enregistrement du lead en parallèle
