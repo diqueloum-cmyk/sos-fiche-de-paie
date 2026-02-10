@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Fichier uploadé:', uploadData);
 
             // ÉTAPE 2: Lancer l'analyse
-            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyse en cours (peut prendre jusqu&apos;à 60s)...';
+            analyzeBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Analyse en cours (peut prendre jusqu'à 60s)...`;
 
             const analyzeResponse = await fetch('/api/analyze', {
                 method: 'POST',
