@@ -242,7 +242,7 @@ export default async function handler(req, res) {
 
     // Envoi de l'email via Resend
     const emailData = await resend.emails.send({
-      from: 'SOS Fiche de Paie <contact@sos-fiche-de-paie.fr>',
+      from: 'SOS Fiche de Paie <onboarding@resend.dev>',
       to: email,
       subject: `Votre rapport d'analyse - ${Math.round(analysis.gain_total_potentiel)}€ récupérables`,
       html: emailHtml
