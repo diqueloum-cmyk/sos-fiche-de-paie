@@ -205,7 +205,7 @@ export default async function handler(req, res) {
 
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: promptWithData,
       messages: [{
         role: 'user',
@@ -215,6 +215,7 @@ export default async function handler(req, res) {
 
     // Parsing de la réponse
     const responseText = message.content[0].text;
+    console.log('Claude stop_reason:', message.stop_reason, '| response length:', responseText.length);
     let rapportComplet;
 
     try {
@@ -226,6 +227,7 @@ export default async function handler(req, res) {
       }
     } catch (parseError) {
       console.error('Erreur parsing JSON rapport:', parseError);
+      console.error('Réponse brute (500 premiers chars):', responseText.substring(0, 500));
       return res.status(500).json({
         error: 'Erreur lors de la génération du rapport'
       });
