@@ -7,6 +7,8 @@ import { put } from '@vercel/blob';
 import { sql } from '@vercel/postgres';
 import { fileTypeFromBuffer } from 'file-type';
 import { checkRateLimit } from '../lib/rate-limit.js';
+import formidable from 'formidable';
+import fs from 'fs';
 
 // Configuration
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -67,7 +69,6 @@ export default async function handler(req, res) {
     }
 
     // Parse multipart form data (utiliser formidable ou multiparty)
-    const formidable = require('formidable');
     const form = formidable({
       maxFileSize: MAX_FILE_SIZE,
       keepExtensions: true
@@ -93,7 +94,6 @@ export default async function handler(req, res) {
       }
 
       // Lecture du fichier
-      const fs = require('fs');
       const fileBuffer = fs.readFileSync(file.filepath);
 
       // VALIDATION CRITIQUE: Vérification du MIME type réel (magic bytes)
