@@ -103,6 +103,10 @@ export default async function handler(req, res) {
       // Protection contre les fichiers falsifiés (ex: .exe renommé en .pdf)
       const detectedType = await fileTypeFromBuffer(fileBuffer);
 
+      // Vérifier le type de fichier réel
+      let isValidFile = false;
+      let detectedMimeType = null;
+
       if (!detectedType) {
         // Fallback pour les PDFs qui peuvent ne pas être détectés
         // Vérifier manuellement les magic bytes du PDF
@@ -112,35 +116,27 @@ export default async function handler(req, res) {
                      fileBuffer[2] === 0x44 && // D
                      fileBuffer[3] === 0x46;   // F
 
-        if (!isPDF) {
-          fs.unlinkSync(file.filepath); // Nettoyer le fichier temporaire
-          return res.status(400).json({
-            error: 'Type de fichier non reconnu ou invalide'
-          });
+        if (isPDF) {
+          isValidFile = true;
+          detectedMimeType = 'application/pdf';
         }
       } else {
         // Vérifier que le MIME détecté est dans la liste autorisée
-        if (!ALLOWED_MIME_TYPES.includes(detectedType.mime)) {
-          fs.unlinkSync(file.filepath); // Nettoyer le fichier temporaire
-          return res.status(400).json({
-            error: `Type de fichier non autorisé: ${detectedType.mime}. Formats acceptés: PDF, JPG, PNG, WebP`
-          });
-        }
-
-        // Validation supplémentaire: vérifier que l'extension correspond au MIME
-        const expectedExt = MIME_TO_EXTENSION[detectedType.mime];
-        if (expectedExt !== detectedType.ext) {
-          console.warn(`⚠️  Extension incohérente: détecté=${detectedType.ext}, attendu=${expectedExt}`);
+        if (ALLOWED_MIME_TYPES.includes(detectedType.mime)) {
+          isValidFile = true;
+          detectedMimeType = detectedType.mime;
         }
       }
 
-      // Validation du type MIME déclaré (protection secondaire)
-      if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-        fs.unlinkSync(file.filepath);
+      if (!isValidFile) {
+        fs.unlinkSync(file.filepath); // Nettoyer le fichier temporaire
         return res.status(400).json({
-          error: 'Type de fichier non autorisé. Formats acceptés: PDF, JPG, PNG, WebP'
+          error: `Format de fichier non autorisé. Formats acceptés: PDF, JPG, PNG`
         });
       }
+
+      // Log pour debug
+      console.log(`Fichier accepté: ${file.originalFilename}, type détecté: ${detectedMimeType}, type déclaré: ${file.mimetype}`);
 
       // Upload vers Vercel Blob Storage
       const fileName = `${Date.now()}-${file.originalFilename}`;
