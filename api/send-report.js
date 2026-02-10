@@ -287,7 +287,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(500).json({
-      error: 'Erreur serveur lors de l\'envoi du rapport',
+      error: "Erreur serveur lors de l'envoi du rapport",
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
