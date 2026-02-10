@@ -212,7 +212,7 @@ export default async function handler(req, res) {
           rapport_complet = ${JSON.stringify(rapportComplet)},
           user_prenom = ${prenom},
           user_email = ${email},
-          report_sent = true,
+          report_sent = false,
           report_sent_at = NOW()
         WHERE id = ${analysisId}
       `,
@@ -240,11 +240,11 @@ export default async function handler(req, res) {
     // Génération du HTML pour l'email
     const emailHtml = generateEmailHtml(prenom, email, analysis, rapportComplet);
 
-    // Envoi de l'email via Resend
+    // Envoi de l'email à l'admin pour vérification
     const emailData = await resend.emails.send({
       from: 'SOS Fiche de Paie <onboarding@resend.dev>',
-      to: email,
-      subject: `Votre rapport d'analyse - ${Math.round(analysis.gain_total_potentiel)}€ récupérables`,
+      to: 'info.sosdivorce@gmail.com',
+      subject: `[A VERIFIER] Rapport pour ${prenom} (${email}) - ${Math.round(analysis.gain_total_potentiel)}€ récupérables`,
       html: emailHtml
     });
 
@@ -252,7 +252,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      message: 'Rapport envoyé avec succès',
+      message: 'Votre rapport est en cours de vérification. Il vous sera envoyé par email après validation.',
       email_id: emailData.id
     });
 
@@ -405,6 +405,12 @@ function generateEmailHtml(prenom, email, analysis, rapport) {
     </div>
 
     <div class="content">
+      <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 20px; margin-bottom: 25px; text-align: center;">
+        <p style="margin: 0 0 8px 0; font-size: 18px; font-weight: 700; color: #856404;">⚠️ RAPPORT A VERIFIER</p>
+        <p style="margin: 0; font-size: 14px; color: #856404;">Destinataire final : <strong>${prenom}</strong> — <strong>${email}</strong></p>
+        <p style="margin: 8px 0 0 0; font-size: 13px; color: #856404;">Ne pas transmettre directement. Verifier le contenu avant envoi au client.</p>
+      </div>
+
       <p>Bonjour <strong>${prenom}</strong>,</p>
       <p style="font-size: 14px; color: #666;">Rapport envoyé à : <strong>${email}</strong></p>
 
