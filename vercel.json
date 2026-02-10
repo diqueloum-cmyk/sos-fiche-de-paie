@@ -11,6 +11,19 @@
       "destination": "/api/:path*"
     }
   ],
+  "routes": [
+    {
+      "src": "/js/(.*)",
+      "dest": "/js/$1"
+    },
+    {
+      "src": "/(.*\\.js)$",
+      "dest": "/$1",
+      "headers": {
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
