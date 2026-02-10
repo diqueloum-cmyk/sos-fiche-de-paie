@@ -274,3 +274,4 @@ Le site met en avant :
 **Version** : 1.0.0  
 **Date** : 2026-02-03  
 **Statut** : MVP Prêt pour tests utilisateurs
+# Cache bust mar. 10 févr. 2026 19:27:03
