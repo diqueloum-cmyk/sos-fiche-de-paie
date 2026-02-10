@@ -140,7 +140,7 @@ export default async function handler(req, res) {
 
     if (!rateLimitResult.allowed) {
       return res.status(429).json({
-        error: 'Trop d\'analyses. Limite: 3 analyses par heure.',
+        error: "Trop d'analyses. Limite: 3 analyses par heure.",
         retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
       });
     }
@@ -334,7 +334,7 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
     }
 
     return res.status(500).json({
-      error: 'Erreur serveur lors de l\'analyse',
+      error: "Erreur serveur lors de l'analyse",
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

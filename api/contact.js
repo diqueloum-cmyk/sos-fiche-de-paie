@@ -267,7 +267,7 @@ export default async function handler(req, res) {
     // Erreur spécifique Resend
     if (error.name === 'ResendError') {
       return res.status(500).json({
-        error: 'Erreur lors de l\'envoi de l\'email'
+        error: "Erreur lors de l'envoi de l'email"
       });
     }
 

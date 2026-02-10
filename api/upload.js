@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     if (!rateLimitResult.allowed) {
       return res.status(429).json({
-        error: 'Trop d\'uploads. Limite: 5 fichiers par heure.',
+        error: "Trop d'uploads. Limite: 5 fichiers par heure.",
         retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
       });
     }
@@ -184,7 +184,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Erreur upload:', error);
     return res.status(500).json({
-      error: 'Erreur serveur lors de l\'upload',
+      error: "Erreur serveur lors de l'upload",
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

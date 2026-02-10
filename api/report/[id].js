@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     const { id } = req.query;
 
     if (!id) {
-      return res.status(400).json({ error: 'ID d\'analyse manquant' });
+      return res.status(400).json({ error: "ID d'analyse manquant" });
     }
 
     // Récupération de l'analyse depuis la DB
