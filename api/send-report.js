@@ -22,7 +22,6 @@ function validateEmail(email) {
 // Validation prénom
 function validatePrenom(prenom) {
   if (!prenom || prenom.length < 2 || prenom.length > 50) return false;
-  // Ne doit pas être un email ni contenir des chiffres
   if (prenom.includes('@') || /\d/.test(prenom)) return false;
   return true;
 }
@@ -32,12 +31,18 @@ const RAPPORT_COMPLET_PROMPT = `Tu es un expert en droit du travail français.
 
 Tu as précédemment analysé un bulletin de paie et détecté des anomalies.
 
-Voici les données de l'analyse:
-- Texte OCR du bulletin: {OCR_TEXT}
+Voici les données de l'analyse précédente:
+- Période du bulletin: {PERIODE}
+- Salaire net mensuel: {SALAIRE_NET} €
+- Ancienneté: {ANCIENNETE} mois
+- Période réclamable: {PERIODE_RECLAMABLE} mois
 - Résumé des anomalies: {ANOMALIES_RESUME}
 - Gain mensuel: {GAIN_MENSUEL} €
 - Gain annuel: {GAIN_ANNUEL} €
 - Gain total potentiel: {GAIN_TOTAL} €
+- Constat initial: {MESSAGE_TEASER}
+
+À partir de ces données, génère un rapport détaillé et complet.
 
 **Ta mission: Générer un rapport COMPLET avec TOUS les détails.**
 
@@ -141,22 +146,20 @@ export default async function handler(req, res) {
     }
 
     if (!validatePrenom(prenom)) {
-      return res.status(400).json({
-        error: 'Prénom invalide'
-      });
+      return res.status(400).json({ error: 'Prénom invalide' });
     }
 
     if (!validateEmail(email)) {
-      return res.status(400).json({
-        error: 'Email invalide'
-      });
+      return res.status(400).json({ error: 'Email invalide' });
     }
 
-    // Récupération de l'analyse depuis la DB
+    // Récupération de l'analyse et du fichier depuis la DB
     const analysisResult = await sql`
       SELECT
         a.*,
         f.file_name,
+        f.blob_url,
+        f.file_type,
         f.uploaded_at
       FROM analyses a
       JOIN files f ON a.file_id = f.id
@@ -186,19 +189,23 @@ export default async function handler(req, res) {
       });
     }
 
-    // Générer le rapport COMPLET via Claude
+    // Préparer le prompt avec les données de l'analyse (texte uniquement, pas de Vision)
     const promptWithData = RAPPORT_COMPLET_PROMPT
-      .replace('{OCR_TEXT}', analysis.raw_ocr_text.substring(0, 3000)) // Limiter pour rester dans le contexte
       .replace('{ANOMALIES_RESUME}', JSON.stringify(analysis.anomalies_resume))
       .replace('{GAIN_MENSUEL}', analysis.gain_mensuel)
       .replace('{GAIN_ANNUEL}', analysis.gain_annuel)
-      .replace('{GAIN_TOTAL}', analysis.gain_total_potentiel);
+      .replace('{GAIN_TOTAL}', analysis.gain_total_potentiel)
+      .replace('{PERIODE}', analysis.periode_bulletin || '')
+      .replace('{SALAIRE_NET}', analysis.salaire_net_mensuel || 0)
+      .replace('{ANCIENNETE}', analysis.anciennete_mois || 0)
+      .replace('{PERIODE_RECLAMABLE}', analysis.periode_reclamable_mois || 0)
+      .replace('{MESSAGE_TEASER}', analysis.message_teaser || '');
 
-    console.log('Génération du rapport complet via Claude...');
+    console.log('Génération du rapport complet via Claude (texte)...');
 
     const message = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
       system: promptWithData,
       messages: [{
         role: 'user',
@@ -220,43 +227,42 @@ export default async function handler(req, res) {
     } catch (parseError) {
       console.error('Erreur parsing JSON rapport:', parseError);
       return res.status(500).json({
-        error: 'Erreur lors de la génération du rapport',
-        details: process.env.NODE_ENV === 'development' ? parseError.message : undefined
+        error: 'Erreur lors de la génération du rapport'
       });
     }
 
-    // Sauvegarde du rapport complet et des infos utilisateur en DB
-    await sql`
-      UPDATE analyses
-      SET
-        rapport_complet = ${JSON.stringify(rapportComplet)},
-        user_prenom = ${prenom},
-        user_email = ${email},
-        report_sent = true,
-        report_sent_at = NOW()
-      WHERE id = ${analysisId}
-    `;
-
-    // Enregistrement du lead dans la table dédiée
-    await sql`
-      INSERT INTO leads (
-        prenom,
-        email,
-        analysis_id,
-        gain_total_potentiel,
-        prix_rapport,
-        source
-      )
-      VALUES (
-        ${prenom},
-        ${email},
-        ${analysisId},
-        ${analysis.gain_total_potentiel},
-        ${analysis.prix_rapport},
-        'offre_lancement'
-      )
-      ON CONFLICT DO NOTHING
-    `;
+    // Sauvegarde du rapport et enregistrement du lead en parallèle
+    await Promise.all([
+      sql`
+        UPDATE analyses
+        SET
+          rapport_complet = ${JSON.stringify(rapportComplet)},
+          user_prenom = ${prenom},
+          user_email = ${email},
+          report_sent = true,
+          report_sent_at = NOW()
+        WHERE id = ${analysisId}
+      `,
+      sql`
+        INSERT INTO leads (
+          prenom,
+          email,
+          analysis_id,
+          gain_total_potentiel,
+          prix_rapport,
+          source
+        )
+        VALUES (
+          ${prenom},
+          ${email},
+          ${analysisId},
+          ${analysis.gain_total_potentiel},
+          ${analysis.prix_rapport},
+          'offre_lancement'
+        )
+        ON CONFLICT DO NOTHING
+      `
+    ]);
 
     // Génération du HTML pour l'email
     const emailHtml = generateEmailHtml(prenom, analysis, rapportComplet);
@@ -287,14 +293,18 @@ export default async function handler(req, res) {
     }
 
     return res.status(500).json({
-      error: "Erreur serveur lors de l'envoi du rapport",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: "Erreur serveur lors de l'envoi du rapport"
     });
   }
 }
 
 // Fonction de génération du HTML de l'email
 function generateEmailHtml(prenom, analysis, rapport) {
+  const safe = (val, decimals = 2) => {
+    const num = Number(val);
+    return isNaN(num) ? '0.00' : num.toFixed(decimals);
+  };
+
   return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -324,18 +334,9 @@ function generateEmailHtml(prenom, analysis, rapport) {
       padding: 40px 30px;
       text-align: center;
     }
-    .header h1 {
-      margin: 0 0 10px 0;
-      font-size: 28px;
-    }
-    .header p {
-      margin: 0;
-      font-size: 16px;
-      opacity: 0.9;
-    }
-    .content {
-      padding: 40px 30px;
-    }
+    .header h1 { margin: 0 0 10px 0; font-size: 28px; }
+    .header p { margin: 0; font-size: 16px; opacity: 0.9; }
+    .content { padding: 40px 30px; }
     .montant-box {
       background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
       border-left: 4px solid #667eea;
@@ -343,11 +344,7 @@ function generateEmailHtml(prenom, analysis, rapport) {
       margin: 25px 0;
       border-radius: 8px;
     }
-    .montant-box h2 {
-      margin: 0 0 15px 0;
-      color: #667eea;
-      font-size: 18px;
-    }
+    .montant-box h2 { margin: 0 0 15px 0; color: #667eea; font-size: 18px; }
     .montant-line {
       display: flex;
       justify-content: space-between;
@@ -367,11 +364,7 @@ function generateEmailHtml(prenom, analysis, rapport) {
       padding: 20px;
       margin: 20px 0;
     }
-    .anomalie h3 {
-      margin: 0 0 15px 0;
-      color: #333;
-      font-size: 16px;
-    }
+    .anomalie h3 { margin: 0 0 15px 0; color: #333; font-size: 16px; }
     .detail-line {
       display: grid;
       grid-template-columns: 150px 1fr;
@@ -379,13 +372,8 @@ function generateEmailHtml(prenom, analysis, rapport) {
       margin: 8px 0;
       font-size: 14px;
     }
-    .detail-label {
-      font-weight: 600;
-      color: #666;
-    }
-    .detail-value {
-      color: #333;
-    }
+    .detail-label { font-weight: 600; color: #666; }
+    .detail-value { color: #333; }
     .lettre-box {
       background: #f0f4ff;
       border: 1px solid #d0d9ff;
@@ -404,17 +392,9 @@ function generateEmailHtml(prenom, analysis, rapport) {
       margin: 25px 0;
       border-radius: 8px;
     }
-    .procedure h3 {
-      margin: 0 0 15px 0;
-      color: #f57c00;
-    }
-    .procedure ol {
-      margin: 10px 0;
-      padding-left: 20px;
-    }
-    .procedure li {
-      margin: 8px 0;
-    }
+    .procedure h3 { margin: 0 0 15px 0; color: #f57c00; }
+    .procedure ol { margin: 10px 0; padding-left: 20px; }
+    .procedure li { margin: 8px 0; }
     .references {
       background: #e8f5e9;
       border-left: 4px solid #4caf50;
@@ -422,18 +402,9 @@ function generateEmailHtml(prenom, analysis, rapport) {
       margin: 25px 0;
       border-radius: 8px;
     }
-    .references h3 {
-      margin: 0 0 15px 0;
-      color: #2e7d32;
-    }
-    .references ul {
-      margin: 10px 0;
-      padding-left: 20px;
-    }
-    .references li {
-      margin: 6px 0;
-      font-size: 14px;
-    }
+    .references h3 { margin: 0 0 15px 0; color: #2e7d32; }
+    .references ul { margin: 10px 0; padding-left: 20px; }
+    .references li { margin: 6px 0; font-size: 14px; }
     .footer {
       background: #f5f5f5;
       padding: 30px;
@@ -456,7 +427,7 @@ function generateEmailHtml(prenom, analysis, rapport) {
 <body>
   <div class="container">
     <div class="header">
-      <h1>📊 Votre Rapport d'Analyse</h1>
+      <h1>Votre Rapport d'Analyse</h1>
       <p>SOS Fiche de Paie</p>
     </div>
 
@@ -466,125 +437,125 @@ function generateEmailHtml(prenom, analysis, rapport) {
       <p>Voici votre rapport complet d'analyse de bulletin de paie.</p>
 
       <div class="montant-box">
-        <h2>💰 Résumé Exécutif</h2>
+        <h2>Resume Executif</h2>
         <div class="montant-line">
-          <span>Anomalies détectées :</span>
-          <span><strong>${rapport.resume_executif.nombre_anomalies}</strong></span>
+          <span>Anomalies detectees :</span>
+          <span><strong>${rapport.resume_executif?.nombre_anomalies || 0}</strong></span>
         </div>
         <div class="montant-line">
           <span>Gain mensuel :</span>
-          <span>${rapport.resume_executif.gain_mensuel.toFixed(2)} €</span>
+          <span>${safe(rapport.resume_executif?.gain_mensuel)} euros</span>
         </div>
         <div class="montant-line">
           <span>Gain annuel :</span>
-          <span>${rapport.resume_executif.gain_annuel.toFixed(2)} €</span>
+          <span>${safe(rapport.resume_executif?.gain_annuel)} euros</span>
         </div>
         <div class="montant-line">
-          <span>Gain total récupérable :</span>
-          <span>${rapport.resume_executif.gain_total.toFixed(2)} €</span>
+          <span>Gain total recuperable :</span>
+          <span>${safe(rapport.resume_executif?.gain_total)} euros</span>
         </div>
       </div>
 
-      <p><em>Ce montant représente environ <strong>${rapport.resume_executif.pourcentage_salaire.toFixed(1)}%</strong> de votre salaire net annuel.</em></p>
+      <p><em>Ce montant represente environ <strong>${safe(rapport.resume_executif?.pourcentage_salaire, 1)}%</strong> de votre salaire net annuel.</em></p>
 
-      <h2>🔍 Détail des Anomalies</h2>
+      <h2>Detail des Anomalies</h2>
 
-      ${rapport.anomalies_detaillees.map((anom, idx) => `
+      ${(rapport.anomalies_detaillees || []).map((anom, idx) => `
         <div class="anomalie">
-          <h3>Anomalie ${idx + 1} : ${anom.titre}</h3>
+          <h3>Anomalie ${idx + 1} : ${anom.titre || ''}</h3>
 
           <div class="detail-line">
-            <div class="detail-label">Ligne concernée :</div>
-            <div class="detail-value">${anom.ligne_concernee}</div>
+            <div class="detail-label">Ligne concernee :</div>
+            <div class="detail-value">${anom.ligne_concernee || ''}</div>
           </div>
 
           <div class="detail-line">
-            <div class="detail-label">Valeur constatée :</div>
-            <div class="detail-value">${anom.valeur_constatee}</div>
+            <div class="detail-label">Valeur constatee :</div>
+            <div class="detail-value">${anom.valeur_constatee || ''}</div>
           </div>
 
           <div class="detail-line">
             <div class="detail-label">Valeur attendue :</div>
-            <div class="detail-value">${anom.valeur_attendue}</div>
+            <div class="detail-value">${anom.valeur_attendue || ''}</div>
           </div>
 
           <div class="detail-line">
-            <div class="detail-label">Calcul de l'écart :</div>
-            <div class="detail-value">${anom.calcul_ecart}</div>
+            <div class="detail-label">Calcul de l'ecart :</div>
+            <div class="detail-value">${anom.calcul_ecart || ''}</div>
           </div>
 
           <div class="detail-line">
             <div class="detail-label">Impact mensuel :</div>
-            <div class="detail-value"><strong>${anom.ecart_mensuel.toFixed(2)} €</strong></div>
+            <div class="detail-value"><strong>${safe(anom.ecart_mensuel)} euros</strong></div>
           </div>
 
           <div class="detail-line">
             <div class="detail-label">Impact annuel :</div>
-            <div class="detail-value"><strong>${anom.impact_annuel.toFixed(2)} €</strong></div>
+            <div class="detail-value"><strong>${safe(anom.impact_annuel)} euros</strong></div>
           </div>
 
           <div class="detail-line">
             <div class="detail-label">Impact total :</div>
-            <div class="detail-value"><strong>${anom.impact_total.toFixed(2)} €</strong></div>
+            <div class="detail-value"><strong>${safe(anom.impact_total)} euros</strong></div>
           </div>
 
           <div class="detail-line">
-            <div class="detail-label">Référence légale :</div>
-            <div class="detail-value"><em>${anom.reference_legale}</em></div>
+            <div class="detail-label">Reference legale :</div>
+            <div class="detail-value"><em>${anom.reference_legale || ''}</em></div>
           </div>
 
           <p style="margin-top: 15px; font-size: 14px; color: #555;">
-            <strong>Explication :</strong> ${anom.explication}
+            <strong>Explication :</strong> ${anom.explication || ''}
           </p>
         </div>
       `).join('')}
 
       <div class="procedure">
-        <h3>📋 Procédure de Réclamation</h3>
+        <h3>Procedure de Reclamation</h3>
 
-        <h4>Étapes à suivre :</h4>
+        <h4>Etapes a suivre :</h4>
         <ol>
-          ${rapport.procedure_reclamation.etapes.map(etape => `<li>${etape}</li>`).join('')}
+          ${(rapport.procedure_reclamation?.etapes || []).map(etape => `<li>${etape}</li>`).join('')}
         </ol>
 
-        <p><strong>Délai :</strong> ${rapport.procedure_reclamation.delai_prescription}</p>
+        <p><strong>Delai :</strong> ${rapport.procedure_reclamation?.delai_prescription || '3 ans'}</p>
 
-        <h4>Documents à joindre :</h4>
+        <h4>Documents a joindre :</h4>
         <ul>
-          ${rapport.procedure_reclamation.documents_joindre.map(doc => `<li>${doc}</li>`).join('')}
+          ${(rapport.procedure_reclamation?.documents_joindre || []).map(doc => `<li>${doc}</li>`).join('')}
         </ul>
 
         <h4>Conseils pratiques :</h4>
         <ul>
-          ${rapport.procedure_reclamation.conseils.map(conseil => `<li>${conseil}</li>`).join('')}
+          ${(rapport.procedure_reclamation?.conseils || []).map(conseil => `<li>${conseil}</li>`).join('')}
         </ul>
       </div>
 
-      <h2>✉️ Lettre de Réclamation Personnalisée</h2>
-      <p>Voici une lettre type que vous pouvez envoyer à votre employeur :</p>
+      <h2>Lettre de Reclamation Personnalisee</h2>
+      <p>Voici une lettre type que vous pouvez envoyer a votre employeur :</p>
 
-      <div class="lettre-box">${rapport.lettre_reclamation}</div>
+      <div class="lettre-box">${rapport.lettre_reclamation || ''}</div>
 
       <div class="references">
-        <h3>📚 Références Légales</h3>
+        <h3>References Legales</h3>
         <ul>
-          ${rapport.references_legales.map(ref => `<li>${ref}</li>`).join('')}
+          ${(rapport.references_legales || []).map(ref => `<li>${ref}</li>`).join('')}
         </ul>
       </div>
 
       <p style="margin-top: 40px;">
-        <strong>Besoin d'aide ?</strong> N'hésitez pas à nous contacter si vous avez des questions.
+        <strong>Besoin d'aide ?</strong> N'hesitez pas a nous contacter si vous avez des questions.
       </p>
 
-      <a href="https://sos-fiche-de-paie.fr/contact" class="button">Nous contacter</a>
+      <a href="https://sos-fiche-de-paie.vercel.app/contact" class="button">Nous contacter</a>
     </div>
 
     <div class="footer">
       <p><strong>SOS Fiche de Paie</strong></p>
-      <p>Ce rapport a été généré automatiquement le ${new Date().toLocaleDateString('fr-FR')}.</p>
+      <p>Ce rapport a ete genere automatiquement le ${new Date().toLocaleDateString('fr-FR')}.</p>
       <p style="margin-top: 15px; font-size: 12px;">
-        Ce document ne constitue pas un avis juridique. Pour toute action légale,<br>
-        consultez un avocat spécialisé en droit du travail.
+        Ce document ne constitue pas un avis juridique. Pour toute action legale,<br>
+        consultez un avocat specialise en droit du travail.
       </p>
     </div>
   </div>
@@ -592,7 +563,3 @@ function generateEmailHtml(prenom, analysis, rapport) {
 </html>
   `;
 }
-
-export const config = {
-  maxDuration: 60,
-};

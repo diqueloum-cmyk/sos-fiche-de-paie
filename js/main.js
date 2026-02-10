@@ -362,9 +362,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     email: email
                 })
             })
-            .then(res => {
+            .then(async res => {
                 if (!res.ok) {
-                    return res.json().then(err => { throw new Error(err.error || 'Erreur serveur'); });
+                    let errorMsg = 'Erreur serveur';
+                    try {
+                        const err = await res.json();
+                        errorMsg = err.error || errorMsg;
+                    } catch {
+                        if (res.status === 504) {
+                            errorMsg = 'Le serveur a mis trop de temps à répondre. Veuillez réessayer.';
+                        }
+                    }
+                    throw new Error(errorMsg);
                 }
                 return res.json();
             })
