@@ -60,7 +60,7 @@
 
     <!-- Stats -->
     <div class="max-w-7xl mx-auto px-4 py-6">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
           <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
             <i class="fas fa-users text-blue-600 text-xl"></i>
@@ -68,15 +68,6 @@
           <div>
             <p class="text-sm text-gray-500">Total utilisateurs</p>
             <p class="text-2xl font-bold text-gray-800" id="stat-total">-</p>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
-          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <i class="fas fa-paper-plane text-green-600 text-xl"></i>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500">Rapports envoyes</p>
-            <p class="text-2xl font-bold text-gray-800" id="stat-sent">-</p>
           </div>
         </div>
         <div class="bg-white rounded-xl shadow p-5 flex items-center gap-4">
@@ -111,7 +102,6 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fichier</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Anomalies</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Gain potentiel</th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Rapport</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Telecharger</th>
               </tr>
@@ -257,7 +247,7 @@
 
       } catch (err) {
         console.error('Erreur chargement:', err);
-        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-red-500">Erreur de chargement</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">Erreur de chargement</td></tr>`;
       } finally {
         loading.classList.add('hidden');
       }
@@ -287,10 +277,6 @@
           ? `${Math.round(parseFloat(a.gain_total_potentiel))} \u20ac`
           : '-';
 
-        const reportBadge = a.report_sent
-          ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700"><i class="fas fa-check mr-1"></i>Envoye</span>'
-          : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Non</span>';
-
         const fileAvailable = a.file_id && !a.deleted_at && a.expires_at && new Date(a.expires_at) > new Date();
 
         const downloadBtn = fileAvailable
@@ -314,7 +300,6 @@
               </span>
             </td>
             <td class="px-4 py-3 text-right text-sm font-semibold text-gray-800">${gain}</td>
-            <td class="px-4 py-3 text-center">${reportBadge}</td>
             <td class="px-4 py-3 text-sm text-gray-500">${date}</td>
             <td class="px-4 py-3 text-center">${downloadBtn}</td>
           </tr>
@@ -324,9 +309,6 @@
 
     function updateStats() {
       document.getElementById('stat-total').textContent = totalCount;
-
-      const sent = allAnalyses.filter(a => a.report_sent).length;
-      document.getElementById('stat-sent').textContent = sent;
 
       const filesAvailable = allAnalyses.filter(a =>
         a.file_id && !a.deleted_at && a.expires_at && new Date(a.expires_at) > new Date()
