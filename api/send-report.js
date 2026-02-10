@@ -1,15 +1,11 @@
 /**
  * API Send Report - Vercel Serverless Function
- * Envoi du rapport complet par email après collecte prénom + email
+ * Envoi du rapport par email après collecte prénom + email
+ * Construit le rapport directement depuis les données d'analyse en DB (pas d'appel Claude)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { sql } from '@vercel/postgres';
 import { Resend } from 'resend';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -26,109 +22,124 @@ function validatePrenom(prenom) {
   return true;
 }
 
-// Prompt pour générer le rapport COMPLET avec tous les détails
-const RAPPORT_COMPLET_PROMPT = `Tu es un expert en droit du travail français.
+// Construire le rapport à partir des données d'analyse existantes
+function buildRapportFromAnalysis(analysis) {
+  const anomalies = analysis.anomalies_resume || [];
+  const gainMensuel = Number(analysis.gain_mensuel) || 0;
+  const gainAnnuel = Number(analysis.gain_annuel) || 0;
+  const gainTotal = Number(analysis.gain_total_potentiel) || 0;
+  const salaireNet = Number(analysis.salaire_net_mensuel) || 0;
+  const netAnnuel = salaireNet * 12;
+  const pourcentage = netAnnuel > 0 ? (gainAnnuel / netAnnuel) * 100 : 0;
+  const periodeReclamable = Number(analysis.periode_reclamable_mois) || 36;
 
-Tu as précédemment analysé un bulletin de paie et détecté des anomalies.
+  const categorieLabels = {
+    heures_sup: 'Heures supplementaires',
+    transport: 'Remboursement transport',
+    smic: 'Respect du SMIC',
+    cotisations: 'Cotisations sociales',
+    autre: 'Autre anomalie'
+  };
 
-Voici les données de l'analyse précédente:
-- Période du bulletin: {PERIODE}
-- Salaire net mensuel: {SALAIRE_NET} €
-- Ancienneté: {ANCIENNETE} mois
-- Période réclamable: {PERIODE_RECLAMABLE} mois
-- Résumé des anomalies: {ANOMALIES_RESUME}
-- Gain mensuel: {GAIN_MENSUEL} €
-- Gain annuel: {GAIN_ANNUEL} €
-- Gain total potentiel: {GAIN_TOTAL} €
-- Constat initial: {MESSAGE_TEASER}
+  const categorieReferences = {
+    heures_sup: 'Article L3121-28 du Code du travail - Majoration des heures supplementaires',
+    transport: 'Article L3261-2 du Code du travail - Prise en charge obligatoire des frais de transport',
+    smic: 'Article L3231-2 du Code du travail - Salaire minimum de croissance',
+    cotisations: 'Articles L241-1 et suivants du Code de la securite sociale',
+    autre: 'Code du travail - Dispositions applicables'
+  };
 
-À partir de ces données, génère un rapport détaillé et complet.
+  const anomaliesDetaillees = anomalies.map(anom => {
+    const cat = anom.categorie || 'autre';
+    const impact = Number(anom.impact_mensuel) || 0;
+    return {
+      titre: categorieLabels[cat] || categorieLabels.autre,
+      ligne_concernee: cat === 'transport' ? 'Remboursement transport / Pass Navigo' :
+                       cat === 'heures_sup' ? 'Heures supplementaires' :
+                       cat === 'smic' ? 'Salaire de base' :
+                       cat === 'cotisations' ? 'Cotisations salariales' : 'Voir bulletin',
+      valeur_constatee: 'Voir bulletin de paie',
+      valeur_attendue: 'Selon la reglementation en vigueur',
+      calcul_ecart: `Ecart constate : ${impact.toFixed(2)} euros/mois`,
+      ecart_mensuel: impact,
+      impact_annuel: impact * 12,
+      impact_total: impact * periodeReclamable,
+      reference_legale: categorieReferences[cat] || categorieReferences.autre,
+      explication: anom.certitude === 'certaine'
+        ? 'Anomalie certaine detectee sur votre bulletin de paie. L\'ecart est clairement identifiable.'
+        : 'Anomalie probable detectee. Une verification approfondie avec vos documents est recommandee.'
+    };
+  });
 
-**Ta mission: Générer un rapport COMPLET avec TOUS les détails.**
-
-Le rapport doit contenir:
-
-## 1. RÉSUMÉ EXÉCUTIF
-- Nombre d'anomalies détectées
-- Montant récupérable (mensuel, annuel, total sur période)
-- % du salaire net annuel
-
-## 2. DÉTAIL DES ANOMALIES
-Pour CHAQUE anomalie:
-- **Titre de l'anomalie**
-- **Ligne concernée** (nom exact tel qu'il apparaît sur le bulletin)
-- **Valeur constatée** (montant ou taux lu sur le bulletin)
-- **Valeur attendue** (montant ou taux selon la loi/CCN)
-- **Calcul de l'écart détaillé** (formule complète)
-- **Écart mensuel** (en €)
-- **Impact annuel** (écart × 12)
-- **Impact total** (écart × période réclamable)
-- **Référence légale** (article de loi ou CCN)
-- **Explication claire** (pourquoi c'est une erreur)
-
-## 3. MONTANTS CLÉS
-- Salaire brut, net avant impôt, net à payer
-- Heures travaillées, taux horaire
-- Récapitulatif des écarts
-
-## 4. PROCÉDURE DE RÉCLAMATION
-- Étapes à suivre
-- Délai de prescription (3 ans)
-- Documents à joindre
-- Conseils pratiques
-
-## 5. LETTRE DE RÉCLAMATION PERSONNALISÉE
-Générer une lettre formelle avec:
-- Objet clair
-- Détail chiffré de chaque anomalie
-- Références légales
-- Demande de régularisation
-- Ton professionnel et factuel
-
-## 6. RÉFÉRENCES LÉGALES
-Liste complète des articles de loi et CCN applicables
-
-**Format de réponse attendu (JSON strict):**
-
-{
-  "resume_executif": {
-    "nombre_anomalies": 0,
-    "gain_mensuel": 0.0,
-    "gain_annuel": 0.0,
-    "gain_total": 0.0,
-    "pourcentage_salaire": 0.0
-  },
-  "anomalies_detaillees": [
-    {
-      "titre": "...",
-      "ligne_concernee": "...",
-      "valeur_constatee": "...",
-      "valeur_attendue": "...",
-      "calcul_ecart": "...",
-      "ecart_mensuel": 0.0,
-      "impact_annuel": 0.0,
-      "impact_total": 0.0,
-      "reference_legale": "...",
-      "explication": "..."
-    }
-  ],
-  "montants_cles": {
-    "salaire_brut": 0.0,
-    "salaire_net": 0.0,
-    "heures_travaillees": 0.0,
-    "taux_horaire": 0.0
-  },
-  "procedure_reclamation": {
-    "etapes": ["...", "..."],
-    "delai_prescription": "...",
-    "documents_joindre": ["...", "..."],
-    "conseils": ["...", "..."]
-  },
-  "lettre_reclamation": "Texte complet de la lettre...",
-  "references_legales": ["...", "..."]
+  return {
+    resume_executif: {
+      nombre_anomalies: Number(analysis.nombre_anomalies) || anomalies.length,
+      gain_mensuel: gainMensuel,
+      gain_annuel: gainAnnuel,
+      gain_total: gainTotal,
+      pourcentage_salaire: pourcentage
+    },
+    anomalies_detaillees: anomaliesDetaillees,
+    montants_cles: {
+      salaire_net: salaireNet,
+      periode_bulletin: analysis.periode_bulletin || '',
+      anciennete_mois: Number(analysis.anciennete_mois) || 0,
+      periode_reclamable: periodeReclamable
+    },
+    procedure_reclamation: {
+      etapes: [
+        'Rassemblez tous vos bulletins de paie des 3 dernieres annees',
+        'Redigez un courrier de reclamation a votre employeur (modele ci-dessous)',
+        'Envoyez le courrier en recommande avec accuse de reception',
+        'Conservez une copie de tous les documents envoyes',
+        'En l\'absence de reponse sous 1 mois, contactez l\'inspection du travail'
+      ],
+      delai_prescription: '3 ans (article L3245-1 du Code du travail)',
+      documents_joindre: [
+        'Copie de vos bulletins de paie concernés',
+        'Copie de votre contrat de travail',
+        'Le courrier de reclamation en recommande AR',
+        'Tout justificatif utile (attestation transport, convention collective...)'
+      ],
+      conseils: [
+        'Gardez un ton factuel et professionnel dans votre courrier',
+        'Citez les references legales precisement',
+        'Demandez une regularisation dans un delai raisonnable (1 mois)',
+        'Conservez tous les echanges ecrits avec votre employeur'
+      ]
+    },
+    lettre_reclamation: generateLettre(analysis, anomaliesDetaillees, gainMensuel, gainTotal),
+    references_legales: [
+      ...new Set(anomaliesDetaillees.map(a => a.reference_legale)),
+      'Article L3245-1 du Code du travail - Prescription triennale des salaires',
+      'Article R3243-1 du Code du travail - Mentions obligatoires du bulletin de paie'
+    ]
+  };
 }
 
-Sois exhaustif et précis. C'est le rapport COMPLET que l'utilisateur va recevoir.`;
+function generateLettre(analysis, anomalies, gainMensuel, gainTotal) {
+  const detailAnomalies = anomalies.map((a, i) =>
+    `${i + 1}. ${a.titre} : ecart mensuel de ${a.ecart_mensuel.toFixed(2)} euros (${a.reference_legale})`
+  ).join('\n');
+
+  return `Objet : Reclamation relative a des erreurs sur mon bulletin de paie
+
+Madame, Monsieur,
+
+Je me permets de vous adresser ce courrier afin de porter a votre attention des anomalies que j'ai constatees sur mon bulletin de paie de ${analysis.periode_bulletin || '[periode]'}.
+
+Apres verification approfondie, les irregularites suivantes ont ete identifiees :
+
+${detailAnomalies}
+
+Le montant total de l'ecart mensuel s'eleve a ${gainMensuel.toFixed(2)} euros, soit un prejudice potentiel de ${gainTotal.toFixed(2)} euros sur la periode reclamable.
+
+Conformement aux dispositions du Code du travail, je vous demande de bien vouloir proceder a la regularisation de ma situation dans un delai d'un mois a compter de la reception de ce courrier.
+
+Je reste a votre disposition pour tout echange complementaire.
+
+Veuillez agreer, Madame, Monsieur, l'expression de mes salutations distinguees.`;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -189,60 +200,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Préparer le prompt avec les données de l'analyse (texte uniquement, pas de Vision)
-    const promptWithData = RAPPORT_COMPLET_PROMPT
-      .replace('{ANOMALIES_RESUME}', JSON.stringify(analysis.anomalies_resume))
-      .replace('{GAIN_MENSUEL}', analysis.gain_mensuel)
-      .replace('{GAIN_ANNUEL}', analysis.gain_annuel)
-      .replace('{GAIN_TOTAL}', analysis.gain_total_potentiel)
-      .replace('{PERIODE}', analysis.periode_bulletin || '')
-      .replace('{SALAIRE_NET}', analysis.salaire_net_mensuel || 0)
-      .replace('{ANCIENNETE}', analysis.anciennete_mois || 0)
-      .replace('{PERIODE_RECLAMABLE}', analysis.periode_reclamable_mois || 0)
-      .replace('{MESSAGE_TEASER}', analysis.message_teaser || '');
-
-    console.log('Génération du rapport complet via Claude (texte)...');
-
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      system: promptWithData,
-      messages: [
-        {
-          role: 'user',
-          content: 'Génère le rapport complet avec tous les détails. Réponds UNIQUEMENT avec le JSON, sans texte avant ni après.'
-        },
-        {
-          role: 'assistant',
-          content: '{'
-        }
-      ]
-    });
-
-    // Parsing de la réponse (prefill avec '{' donc on le rajoute)
-    const responseText = '{' + message.content[0].text;
-    console.log('Claude stop_reason:', message.stop_reason, '| response length:', responseText.length);
-    let rapportComplet;
-
-    try {
-      rapportComplet = JSON.parse(responseText);
-    } catch (parseError) {
-      // Fallback: essayer d'extraire le JSON avec regex
-      try {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          rapportComplet = JSON.parse(jsonMatch[0]);
-        } else {
-          throw parseError;
-        }
-      } catch (fallbackError) {
-        console.error('Erreur parsing JSON rapport:', fallbackError.message);
-        console.error('Réponse brute (500 premiers chars):', responseText.substring(0, 500));
-        return res.status(500).json({
-          error: 'Erreur lors de la génération du rapport'
-        });
-      }
-    }
+    // Construire le rapport directement depuis les données d'analyse
+    console.log('Construction du rapport depuis les données d\'analyse...');
+    const rapportComplet = buildRapportFromAnalysis(analysis);
 
     // Sauvegarde du rapport et enregistrement du lead en parallèle
     await Promise.all([
