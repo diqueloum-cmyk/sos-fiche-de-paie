@@ -50,7 +50,13 @@
     }
   ],
   "functions": {
+    "api/upload.js": {
+      "maxDuration": 30
+    },
     "api/analyze.js": {
+      "maxDuration": 60
+    },
+    "api/send-report.js": {
       "maxDuration": 60
     },
     "api/report/[id].js": {
@@ -58,6 +64,15 @@
     },
     "api/cron/cleanup.js": {
       "maxDuration": 300
+    },
+    "api/admin/login.js": {
+      "maxDuration": 10
+    },
+    "api/admin/analyses.js": {
+      "maxDuration": 15
+    },
+    "api/admin/download/[fileId].js": {
+      "maxDuration": 30
     }
   },
   "crons": [
