@@ -31,10 +31,9 @@ const MIME_TO_EXTENSION = {
 
 export const config = {
   api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
+    bodyParser: false, // Disable Next.js body parser to use formidable
   },
+  maxDuration: 30,
 };
 
 export default async function handler(req, res) {
@@ -68,23 +67,27 @@ export default async function handler(req, res) {
       });
     }
 
-    // Parse multipart form data (utiliser formidable ou multiparty)
-    const form = formidable({
-      maxFileSize: MAX_FILE_SIZE,
-      keepExtensions: true
+    // Parse multipart form data with Promise wrapper
+    const { fields, files } = await new Promise((resolve, reject) => {
+      const form = formidable({
+        maxFileSize: MAX_FILE_SIZE,
+        keepExtensions: true
+      });
+
+      form.parse(req, (err, fields, files) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ fields, files });
+        }
+      });
     });
 
-    form.parse(req, async (err, fields, files) => {
-      if (err) {
-        console.error('Erreur parsing form:', err);
-        return res.status(400).json({ error: 'Erreur lors du parsing du fichier' });
-      }
+    const file = files.file?.[0] || files.file;
 
-      const file = files.file?.[0] || files.file;
-
-      if (!file) {
-        return res.status(400).json({ error: 'Aucun fichier fourni' });
-      }
+    if (!file) {
+      return res.status(400).json({ error: 'Aucun fichier fourni' });
+    }
 
       // Validation de la taille AVANT lecture complète
       if (file.size > MAX_FILE_SIZE) {
@@ -178,14 +181,18 @@ export default async function handler(req, res) {
         fileName: fileRecord.file_name,
         fileUrl: fileRecord.blob_url,
         uploadedAt: fileRecord.uploaded_at
-      });
     });
 
   } catch (error) {
     console.error('Erreur upload:', error);
-    return res.status(500).json({
-      error: "Erreur serveur lors de l'upload",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+
+    // Si la réponse n'a pas encore été envoyée
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: "Erreur serveur lors de l'upload",
+        message: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
   }
 }
