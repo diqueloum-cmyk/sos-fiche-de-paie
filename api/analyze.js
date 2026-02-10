@@ -1,41 +1,16 @@
 /**
  * API Analyze - Vercel Serverless Function
- * Analyse de fiche de paie via OCR + Claude API
+ * Analyse de fiche de paie via Claude Vision API (lecture directe du document)
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import { sql } from '@vercel/postgres';
-import Tesseract from 'tesseract.js';
-import fetch from 'node-fetch';
+import { fileTypeFromBuffer } from 'file-type';
 import { checkRateLimit } from '../lib/rate-limit.js';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
-
-// Données de référence 2025
-const REFERENCE_DATA = {
-  SMIC: {
-    horaire_brut: 11.88,
-    mensuel_brut_35h: 1801.80
-  },
-  PASS_NAVIGO: {
-    mensuel_toutes_zones: 88.80,
-    remboursement_min: 0.50 // 50%
-  },
-  CSG_CRDS: {
-    assiette: 0.9825, // 98.25% du brut
-    csg_deductible: 0.068,
-    csg_non_deductible: 0.024,
-    crds: 0.005,
-    total: 0.097
-  },
-  HEURES_SUP: {
-    majoration_25: 0.25, // 36e à 43e heure
-    majoration_50: 0.50  // à partir de 44e heure
-  },
-  PRESCRIPTION_MOIS: 36
-};
 
 // Prompt système spécialisé pour analyse TEASER (avant collecte email)
 const SYSTEM_PROMPT = `Tu es un expert en droit du travail français et en analyse de bulletins de paie.
@@ -129,11 +104,9 @@ export default async function handler(req, res) {
 
   try {
     // Rate limiting - max 3 analyses par heure par IP
-    // L'analyse Claude est coûteuse, donc limite stricte
     const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
     const rateLimitResult = await checkRateLimit(`analyze:${ip}`, 3, 3600000);
 
-    // Ajouter les headers de rate limit
     res.setHeader('X-RateLimit-Limit', 3);
     res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining);
     res.setHeader('X-RateLimit-Reset', new Date(rateLimitResult.resetAt).toISOString());
@@ -164,60 +137,45 @@ export default async function handler(req, res) {
 
     // Téléchargement du fichier depuis Blob Storage
     const fileResponse = await fetch(file.blob_url);
-    const fileBuffer = await fileResponse.buffer();
+    const fileArrayBuffer = await fileResponse.arrayBuffer();
+    const fileBuffer = Buffer.from(fileArrayBuffer);
+    const fileBase64 = fileBuffer.toString('base64');
 
-    // OCR du fichier
-    let extractedText = '';
+    // Détecter le vrai type MIME depuis les magic bytes (le type déclaré peut être faux)
+    const detectedType = await fileTypeFromBuffer(fileBuffer);
+    let mediaType;
 
-    if (file.file_type === 'application/pdf') {
-      // Pour PDF: conversion en images puis OCR
-      // Note: nécessite pdf-poppler ou pdf2pic
-      const pdf2pic = require('pdf2pic');
-      const converter = pdf2pic.fromBuffer(fileBuffer, {
-        density: 300,
-        format: 'png',
-        width: 2000,
-        height: 2000
-      });
-
-      const pages = await converter.bulk(-1); // toutes les pages
-
-      for (const page of pages) {
-        const { data } = await Tesseract.recognize(
-          page.base64,
-          'fra',
-          {
-            logger: m => console.log(m)
-          }
-        );
-        extractedText += data.text + '\n';
-      }
+    if (detectedType) {
+      mediaType = detectedType.mime;
     } else {
-      // Pour images: OCR direct
-      const { data } = await Tesseract.recognize(
-        fileBuffer,
-        'fra',
-        {
-          logger: m => console.log(m)
-        }
-      );
-      extractedText = data.text;
+      // Fallback: vérifier si c'est un PDF via magic bytes
+      const isPDF = fileBuffer.length > 4 &&
+        fileBuffer[0] === 0x25 && fileBuffer[1] === 0x50 &&
+        fileBuffer[2] === 0x44 && fileBuffer[3] === 0x46;
+      mediaType = isPDF ? 'application/pdf' : file.file_type;
     }
 
-    console.log('Texte extrait:', extractedText.substring(0, 500));
+    // Normaliser image/jpg → image/jpeg
+    if (mediaType === 'image/jpg') mediaType = 'image/jpeg';
 
-    // Appel à Claude API pour analyse TEASER
-    const message = await anthropic.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: 'user',
-        content: `Analyse ce bulletin de paie français et calcule le gain récupérable.
+    // Construire le contenu pour Claude Vision API
+    // Claude peut lire directement les images et PDFs sans OCR
+    let userContent;
 
-Texte extrait du bulletin:
-
-${extractedText}
+    if (mediaType === 'application/pdf') {
+      // Pour les PDFs, utiliser le type document de Claude
+      userContent = [
+        {
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: fileBase64
+          }
+        },
+        {
+          type: 'text',
+          text: `Analyse ce bulletin de paie français et calcule le gain récupérable.
 
 Applique la méthodologie complète:
 1. Extraire toutes les données du bulletin
@@ -228,6 +186,44 @@ Applique la méthodologie complète:
 
 Réponds UNIQUEMENT avec un objet JSON valide selon le format spécifié.
 NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
+        }
+      ];
+    } else {
+      // Pour les images (JPEG, PNG, WebP), utiliser le type image
+      userContent = [
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: mediaType,
+            data: fileBase64
+          }
+        },
+        {
+          type: 'text',
+          text: `Analyse ce bulletin de paie français et calcule le gain récupérable.
+
+Applique la méthodologie complète:
+1. Extraire toutes les données du bulletin
+2. Détecter les anomalies C1 et C2
+3. Calculer gain mensuel, annuel, et total potentiel
+4. Déterminer le prix du rapport selon la grille
+5. Calculer les % du salaire net
+
+Réponds UNIQUEMENT avec un objet JSON valide selon le format spécifié.
+NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
+        }
+      ];
+    }
+
+    // Appel à Claude API avec Vision (lecture directe du document)
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 1024,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: 'user',
+        content: userContent
       }]
     });
 
@@ -236,7 +232,6 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
     let analysisResult;
 
     try {
-      // Extraction du JSON de la réponse (peut contenir du texte autour)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         analysisResult = JSON.parse(jsonMatch[0]);
@@ -251,7 +246,7 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
       });
     }
 
-    // Sauvegarde des résultats en DB (format teaser + données complètes pour rapport)
+    // Sauvegarde des résultats en DB
     const analysisRecord = await sql`
       INSERT INTO analyses (
         file_id,
@@ -289,7 +284,7 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
         ${analysisResult.periode_bulletin || ''},
         ${JSON.stringify(analysisResult.anomalies_resume || [])},
         ${analysisResult.message_teaser || ''},
-        ${extractedText},
+        ${'[Vision API - lecture directe du document]'},
         NOW(),
         false
       )
@@ -298,7 +293,7 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
 
     const analysisId = analysisRecord.rows[0].id;
 
-    // Réponse TEASER (sans détails des anomalies)
+    // Réponse TEASER
     return res.status(200).json({
       success: true,
       analysisId,
@@ -320,7 +315,6 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
   } catch (error) {
     console.error('Erreur analyse:', error);
 
-    // Gestion des erreurs spécifiques Claude API
     if (error.status === 429) {
       return res.status(429).json({
         error: 'Limite de requêtes atteinte. Veuillez réessayer dans quelques instants.'
@@ -334,12 +328,7 @@ NE PAS révéler la nature exacte des erreurs dans le message_teaser.`
     }
 
     return res.status(500).json({
-      error: "Erreur serveur lors de l'analyse",
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: "Erreur serveur lors de l'analyse"
     });
   }
 }
-
-export const config = {
-  maxDuration: 60, // Timeout 60 secondes (analyse peut être longue)
-};

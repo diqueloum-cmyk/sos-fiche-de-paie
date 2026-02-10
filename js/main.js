@@ -199,8 +199,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!uploadResponse.ok) {
-                const error = await uploadResponse.json();
-                throw new Error(error.error || "Erreur lors de l'upload");
+                let errorMsg = "Erreur lors de l'upload";
+                try {
+                    const error = await uploadResponse.json();
+                    errorMsg = error.error || errorMsg;
+                } catch {
+                    // Response not JSON (e.g. 504 HTML page)
+                }
+                throw new Error(errorMsg);
             }
 
             const uploadData = await uploadResponse.json();
@@ -216,8 +222,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!analyzeResponse.ok) {
-                const error = await analyzeResponse.json();
-                throw new Error(error.error || "Erreur lors de l'analyse");
+                let errorMsg = "Erreur lors de l'analyse";
+                try {
+                    const error = await analyzeResponse.json();
+                    errorMsg = error.error || errorMsg;
+                } catch {
+                    if (analyzeResponse.status === 504) {
+                        errorMsg = "L'analyse a pris trop de temps. Veuillez réessayer avec une image plus légère.";
+                    }
+                }
+                throw new Error(errorMsg);
             }
 
             const analysisData = await analyzeResponse.json();
