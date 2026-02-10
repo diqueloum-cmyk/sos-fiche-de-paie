@@ -1,6 +1,7 @@
 {
   "name": "sos-fiche-de-paie",
   "version": "1.0.0",
+  "type": "module",
   "description": "Application d'analyse de fiches de paie avec IA - Flow conversationnel",
   "private": true,
   "scripts": {
