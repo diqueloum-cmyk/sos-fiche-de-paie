@@ -54,7 +54,7 @@
       "maxDuration": 30
     },
     "api/analyze.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     },
     "api/send-report.js": {
       "maxDuration": 60

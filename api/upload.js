@@ -7,8 +7,7 @@ import { put } from '@vercel/blob';
 import { sql } from '@vercel/postgres';
 import { fileTypeFromBuffer } from 'file-type';
 import { checkRateLimit } from '../lib/rate-limit.js';
-import formidable from 'formidable';
-import fs from 'fs';
+import Busboy from 'busboy';
 
 // Configuration
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -20,26 +19,20 @@ const ALLOWED_MIME_TYPES = [
   'image/webp'
 ];
 
-// Mapping des extensions pour file-type
-const MIME_TO_EXTENSION = {
-  'application/pdf': 'pdf',
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp'
-};
-
-export const config = {
-  api: {
-    bodyParser: false, // Disable Next.js body parser to use formidable
-  },
-  maxDuration: 30,
-};
-
 export default async function handler(req, res) {
   // Autoriser uniquement POST
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  // Vérifier les variables d'environnement critiques
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error('BLOB_READ_WRITE_TOKEN manquant');
+    return res.status(500).json({ error: 'Configuration serveur incomplète (storage)' });
   }
 
   try {
@@ -58,6 +51,7 @@ export default async function handler(req, res) {
         retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
       });
     }
+
     // Récupération du fichier depuis FormData
     const contentType = req.headers['content-type'];
 
@@ -67,122 +61,94 @@ export default async function handler(req, res) {
       });
     }
 
-    // Parse multipart form data with Promise wrapper
-    const { fields, files } = await new Promise((resolve, reject) => {
-      const form = formidable({
-        maxFileSize: MAX_FILE_SIZE,
-        keepExtensions: true
-      });
+    // Parse multipart avec busboy (compatible Vercel serverless)
+    const { fileBuffer, originalFilename, mimetype, fileSize } = await parseMultipart(req);
 
-      form.parse(req, (err, fields, files) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ fields, files });
-        }
-      });
-    });
-
-    const file = files.file?.[0] || files.file;
-
-    if (!file) {
+    if (!fileBuffer) {
       return res.status(400).json({ error: 'Aucun fichier fourni' });
     }
 
-      // Validation de la taille AVANT lecture complète
-      if (file.size > MAX_FILE_SIZE) {
-        return res.status(400).json({
-          error: `Fichier trop volumineux (max: ${MAX_FILE_SIZE / 1024 / 1024}MB)`
-        });
-      }
-
-      // Lecture du fichier
-      const fileBuffer = fs.readFileSync(file.filepath);
-
-      // VALIDATION CRITIQUE: Vérification du MIME type réel (magic bytes)
-      // Protection contre les fichiers falsifiés (ex: .exe renommé en .pdf)
-      const detectedType = await fileTypeFromBuffer(fileBuffer);
-
-      // Vérifier le type de fichier réel
-      let isValidFile = false;
-      let detectedMimeType = null;
-
-      if (!detectedType) {
-        // Fallback pour les PDFs qui peuvent ne pas être détectés
-        // Vérifier manuellement les magic bytes du PDF
-        const isPDF = fileBuffer.length > 4 &&
-                     fileBuffer[0] === 0x25 && // %
-                     fileBuffer[1] === 0x50 && // P
-                     fileBuffer[2] === 0x44 && // D
-                     fileBuffer[3] === 0x46;   // F
-
-        if (isPDF) {
-          isValidFile = true;
-          detectedMimeType = 'application/pdf';
-        }
-      } else {
-        // Vérifier que le MIME détecté est dans la liste autorisée
-        if (ALLOWED_MIME_TYPES.includes(detectedType.mime)) {
-          isValidFile = true;
-          detectedMimeType = detectedType.mime;
-        }
-      }
-
-      if (!isValidFile) {
-        fs.unlinkSync(file.filepath); // Nettoyer le fichier temporaire
-        return res.status(400).json({
-          error: `Format de fichier non autorisé. Formats acceptés: PDF, JPG, PNG`
-        });
-      }
-
-      // Log pour debug
-      console.log(`Fichier accepté: ${file.originalFilename}, type détecté: ${detectedMimeType}, type déclaré: ${file.mimetype}`);
-
-      // Upload vers Vercel Blob Storage
-      const fileName = `${Date.now()}-${file.originalFilename}`;
-
-      const blob = await put(fileName, fileBuffer, {
-        access: 'public',
-        contentType: file.mimetype,
+    // Validation de la taille
+    if (fileSize > MAX_FILE_SIZE) {
+      return res.status(400).json({
+        error: `Fichier trop volumineux (max: ${MAX_FILE_SIZE / 1024 / 1024}MB)`
       });
+    }
 
-      // Enregistrement en base de données
-      const result = await sql`
-        INSERT INTO files (
-          blob_url,
-          file_name,
-          file_type,
-          file_size,
-          uploaded_at
-        )
-        VALUES (
-          ${blob.url},
-          ${file.originalFilename},
-          ${file.mimetype},
-          ${file.size},
-          NOW()
-        )
-        RETURNING id, blob_url, file_name, uploaded_at
-      `;
+    // VALIDATION CRITIQUE: Vérification du MIME type réel (magic bytes)
+    const detectedType = await fileTypeFromBuffer(fileBuffer);
 
-      const fileRecord = result.rows[0];
+    let isValidFile = false;
+    let detectedMimeType = null;
 
-      // Nettoyage du fichier temporaire
-      fs.unlinkSync(file.filepath);
+    if (!detectedType) {
+      // Fallback pour les PDFs qui peuvent ne pas être détectés
+      const isPDF = fileBuffer.length > 4 &&
+                   fileBuffer[0] === 0x25 && // %
+                   fileBuffer[1] === 0x50 && // P
+                   fileBuffer[2] === 0x44 && // D
+                   fileBuffer[3] === 0x46;   // F
 
-      // Réponse avec fileId
-      return res.status(200).json({
-        success: true,
-        fileId: fileRecord.id,
-        fileName: fileRecord.file_name,
-        fileUrl: fileRecord.blob_url,
-        uploadedAt: fileRecord.uploaded_at
+      if (isPDF) {
+        isValidFile = true;
+        detectedMimeType = 'application/pdf';
+      }
+    } else {
+      if (ALLOWED_MIME_TYPES.includes(detectedType.mime)) {
+        isValidFile = true;
+        detectedMimeType = detectedType.mime;
+      }
+    }
+
+    if (!isValidFile) {
+      return res.status(400).json({
+        error: 'Format de fichier non autorisé. Formats acceptés: PDF, JPG, PNG'
+      });
+    }
+
+    console.log(`Fichier accepté: ${originalFilename}, type détecté: ${detectedMimeType}, type déclaré: ${mimetype}`);
+
+    // Upload vers Vercel Blob Storage
+    const fileName = `${Date.now()}-${originalFilename}`;
+
+    const blob = await put(fileName, fileBuffer, {
+      access: 'public',
+      contentType: detectedMimeType,
+    });
+
+    // Enregistrement en base de données (stocker le type détecté, pas le type déclaré)
+    const result = await sql`
+      INSERT INTO files (
+        blob_url,
+        file_name,
+        file_type,
+        file_size,
+        uploaded_at
+      )
+      VALUES (
+        ${blob.url},
+        ${originalFilename},
+        ${detectedMimeType},
+        ${fileSize},
+        NOW()
+      )
+      RETURNING id, blob_url, file_name, uploaded_at
+    `;
+
+    const fileRecord = result.rows[0];
+
+    // Réponse avec fileId
+    return res.status(200).json({
+      success: true,
+      fileId: fileRecord.id,
+      fileName: fileRecord.file_name,
+      fileUrl: fileRecord.blob_url,
+      uploadedAt: fileRecord.uploaded_at
     });
 
   } catch (error) {
-    console.error('Erreur upload:', error);
+    console.error('Erreur upload:', error.message, error.stack);
 
-    // Si la réponse n'a pas encore été envoyée
     if (!res.headersSent) {
       return res.status(500).json({
         error: "Erreur serveur lors de l'upload",
@@ -191,4 +157,52 @@ export default async function handler(req, res) {
       });
     }
   }
+}
+
+/**
+ * Parse multipart/form-data avec busboy (compatible Vercel serverless)
+ * Contrairement à formidable, busboy n'a pas besoin d'écrire sur disque
+ * et fonctionne directement avec le stream de la requête.
+ */
+function parseMultipart(req) {
+  return new Promise((resolve, reject) => {
+    let fileBuffer = null;
+    let originalFilename = '';
+    let mimetype = '';
+    let fileSize = 0;
+    const chunks = [];
+
+    const busboy = Busboy({
+      headers: req.headers,
+      limits: {
+        fileSize: MAX_FILE_SIZE,
+        files: 1
+      }
+    });
+
+    busboy.on('file', (fieldname, stream, info) => {
+      const { filename, mimeType } = info;
+      originalFilename = filename;
+      mimetype = mimeType;
+
+      stream.on('data', (chunk) => {
+        chunks.push(chunk);
+        fileSize += chunk.length;
+      });
+
+      stream.on('end', () => {
+        fileBuffer = Buffer.concat(chunks);
+      });
+    });
+
+    busboy.on('finish', () => {
+      resolve({ fileBuffer, originalFilename, mimetype, fileSize });
+    });
+
+    busboy.on('error', (err) => {
+      reject(err);
+    });
+
+    req.pipe(busboy);
+  });
 }
