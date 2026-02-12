@@ -104,6 +104,7 @@
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Gain potentiel</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Telecharger</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">JSON</th>
               </tr>
             </thead>
             <tbody id="analyses-tbody" class="divide-y divide-gray-100">
@@ -247,7 +248,7 @@
 
       } catch (err) {
         console.error('Erreur chargement:', err);
-        tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">Erreur de chargement</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-red-500">Erreur de chargement</td></tr>`;
       } finally {
         loading.classList.add('hidden');
       }
@@ -302,6 +303,9 @@
             <td class="px-4 py-3 text-right text-sm font-semibold text-gray-800">${gain}</td>
             <td class="px-4 py-3 text-sm text-gray-500">${date}</td>
             <td class="px-4 py-3 text-center">${downloadBtn}</td>
+            <td class="px-4 py-3 text-center">
+              <button onclick="downloadAnalysisJson('${a.id}')" class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition"><i class="fas fa-code mr-1"></i>JSON</button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -366,6 +370,52 @@
         console.error('Erreur telechargement:', err);
         alert('Erreur lors du telechargement du fichier');
       }
+    }
+
+    // --- TELECHARGEMENT JSON ---
+
+    function buildAnalysisJson(a) {
+      return {
+        id: a.id,
+        status: a.status,
+        periode_bulletin: a.periode_bulletin,
+        user_prenom: a.user_prenom,
+        user_email: a.user_email,
+        nombre_anomalies: a.nombre_anomalies,
+        gain_mensuel: a.gain_mensuel,
+        gain_annuel: a.gain_annuel,
+        gain_total_potentiel: a.gain_total_potentiel,
+        anciennete_mois: a.anciennete_mois,
+        periode_reclamable_mois: a.periode_reclamable_mois,
+        salaire_net_mensuel: a.salaire_net_mensuel,
+        pourcentage_salaire_annuel: a.pourcentage_salaire_annuel,
+        pourcentage_salaire_total: a.pourcentage_salaire_total,
+        prix_rapport: a.prix_rapport,
+        anomalies_resume: a.anomalies_resume,
+        message_teaser: a.message_teaser,
+        raisonnement: a.raw_ocr_text,
+        report_sent: a.report_sent,
+        analyzed_at: a.analyzed_at
+      };
+    }
+
+    function downloadAnalysisJson(analysisId) {
+      const a = allAnalyses.find(x => x.id === analysisId);
+      if (!a) {
+        alert('Analyse introuvable');
+        return;
+      }
+      const data = buildAnalysisJson(a);
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `analyse_${(a.user_prenom || 'inconnu').replace(/\s+/g, '_')}_${analysisId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
 
     // --- UTILITAIRES ---
