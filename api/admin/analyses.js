@@ -50,11 +50,10 @@ export default async function handler(req, res) {
           f.deleted_at
         FROM analyses a
         LEFT JOIN files f ON a.file_id = f.id
-        WHERE a.user_email IS NOT NULL
         ORDER BY a.analyzed_at DESC
         LIMIT 50 OFFSET ${offset}
       `,
-      sql`SELECT COUNT(*) as total FROM analyses WHERE user_email IS NOT NULL`
+      sql`SELECT COUNT(*) as total FROM analyses`
     ]);
 
     return res.status(200).json({
